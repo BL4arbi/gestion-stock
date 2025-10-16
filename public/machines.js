@@ -26,8 +26,8 @@ function renderMachines(machines) {
     container.innerHTML = `
       <div class="empty-state">
         <div class="empty-state-icon">🤖</div>
-        <h3>Aucune machine</h3>
-        <p>Ajoutez votre première machine</p>
+        <h3>Aucune machine enregistrée</h3>
+        <p>Commencez par ajouter une machine au parc industriel</p>
       </div>
     `;
     return;
@@ -41,7 +41,7 @@ function renderMachines(machines) {
           ${
             machine.glb_path
               ? `<model-viewer src="${machine.glb_path}" auto-rotate camera-controls style="width:100%;height:100%;background:#000;"></model-viewer>`
-              : `<div style="background:#000;display:flex;align-items:center;justify-content:center;color:#666;width:100%;height:100%;">📦</div>`
+              : `<div style="background:#003366;display:flex;align-items:center;justify-content:center;color:white;width:100%;height:100%;font-size:3em;">🤖</div>`
           }
         </div>
         
@@ -50,7 +50,7 @@ function renderMachines(machines) {
           <div class="machine-actions-bottom">
             <button class="btn-compact" onclick="openMachineDetails(${
               machine.id
-            })" title="Détails">📋</button>
+            })" title="Détails">📋 Voir</button>
             <button class="btn-compact delete" onclick="deleteMachine(${
               machine.id
             })" title="Supprimer">🗑️</button>
@@ -124,7 +124,7 @@ function getPriorityColor(priority) {
   const colors = {
     low: "#10b981",
     medium: "#f59e0b",
-    high: "#e94560",
+    high: "#FF6B35",
     critical: "#8b0000",
   };
   return colors[priority] || "#666";
@@ -160,78 +160,96 @@ function showMachineModal(machine, maintenances = [], files = []) {
 
   modal.innerHTML = `
     <div class="modal-content" style="max-width: 1200px;">
+      <img src="/assets/logo-tacquet.png" class="modal-watermark" alt="Tacquet Industries" />
+      
       <div class="modal-header">
         <h2>${escapeHtml(machine.nom)}</h2>
         <button class="modal-close" onclick="closeModalProperly()">×</button>
       </div>
       
-      <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
-        <button class="tab-btn active" onclick="switchTab('infos', this)">📋 Infos</button>
-        <button class="tab-btn" onclick="switchTab('maintenance', this)">📅 Maintenances</button>
-        <button class="tab-btn" onclick="switchTab('files', this)">📄 Documents</button>
+      <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #F5F5F5; padding-bottom: 10px;">
+        <button class="tab-btn active" onclick="switchTab('infos', this)">📋 Informations</button>
+        <button class="tab-btn" onclick="switchTab('maintenance', this)">🔧 Maintenances</button>
+        <button class="tab-btn" onclick="switchTab('files', this)">📄 Documentation</button>
       </div>
 
       <div id="tab-infos" class="tab-content">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
           <div>
-            <h3>📋 Infos machine</h3>
-            <p><strong>Nom:</strong> ${escapeHtml(machine.nom)}</p>
-            <p><strong>Référence:</strong> ${machine.reference}</p>
-            <p><strong>Quantité:</strong> ${machine.quantite}</p>
-            <p><strong>Localisation:</strong> ${
-              machine.localisation || "N/A"
+            <h3>📋 Fiche technique</h3>
+            <p style="margin:10px 0;"><strong>Nom :</strong> ${escapeHtml(
+              machine.nom
+            )}</p>
+            <p style="margin:10px 0;"><strong>Référence :</strong> ${
+              machine.reference
             }</p>
-            <p><strong>Prix:</strong> ${parseFloat(machine.prix || 0).toFixed(
-              2
-            )}€</p>
-            <p><strong>Seuil:</strong> ${machine.seuil_alert}</p>
+            <p style="margin:10px 0;"><strong>Quantité :</strong> ${
+              machine.quantite
+            } unité(s)</p>
+            <p style="margin:10px 0;"><strong>Localisation :</strong> ${
+              machine.localisation || "Non définie"
+            }</p>
+            <p style="margin:10px 0;"><strong>Valeur d'achat :</strong> ${parseFloat(
+              machine.prix || 0
+            ).toFixed(2)}€</p>
+            <p style="margin:10px 0;"><strong>Seuil d'alerte :</strong> ${
+              machine.seuil_alert
+            }</p>
             <button class="btn-primary" onclick="openEditMachineModal(${
               machine.id
-            })" style="margin-top:15px;">✏️ Modifier</button>
+            })" style="margin-top:20px;">✏️ Modifier la fiche</button>
           </div>
           ${
             machine.glb_path
-              ? `<div><h3>🎨 3D</h3><model-viewer src="${machine.glb_path}" auto-rotate camera-controls style="width:100%;height:300px;border-radius:8px;background:#000;"></model-viewer></div>`
-              : `<div style="background:#f5f5f5;padding:20px;border-radius:8px;text-align:center;display:flex;align-items:center;justify-content:center;height:300px;"><p style="color:#999;">📦 Pas de modèle</p></div>`
+              ? `<div><h3>🎨 Modèle 3D</h3><model-viewer src="${machine.glb_path}" auto-rotate camera-controls style="width:100%;height:350px;border-radius:4px;background:#000;border:2px solid #E0E0E0;"></model-viewer></div>`
+              : `<div style="background:#F5F5F5;padding:40px;border-radius:4px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;height:350px;border:2px dashed #ccc;"><div style="font-size:4em;margin-bottom:15px;opacity:0.3;">🤖</div><p style="color:#999;font-weight:600;">Aucun modèle 3D disponible</p></div>`
           }
         </div>
       </div>
 
       <div id="tab-maintenance" class="tab-content" style="display:none;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
-          <h3>📅 Maintenances (${pending.length})</h3>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+          <h3>🔧 Planning de maintenance (${pending.length} en attente)</h3>
           <button class="btn-primary" onclick="openAddMaintenanceModal(${
             machine.id
-          })">➕ Ajouter</button>
+          })">➕ Planifier</button>
         </div>
         ${
           pending.length === 0
-            ? "<p style='text-align:center;color:#999;'>Aucune en attente</p>"
+            ? "<div style='text-align:center;padding:40px;background:#F5F5F5;border-radius:4px;'><p style='color:#999;font-size:1.1em;'>✅ Aucune maintenance en attente</p></div>"
             : pending
                 .map(
                   (m) => `
-          <div style="background:#f5f5f5;padding:15px;margin-bottom:12px;border-radius:8px;border-left:5px solid ${getPriorityColor(
+          <div style="background:white;padding:20px;margin-bottom:15px;border-radius:4px;border-left:5px solid ${getPriorityColor(
             m.priority
-          )};">
-            <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">
-              <strong>${m.type === "preventive" ? "🛡️" : "🔧"}</strong>
+          )};box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+            <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px;">
+              <strong style="font-size:1.3em;">${
+                m.type === "preventive" ? "🛡️" : "🔧"
+              }</strong>
               <span style="background:${getPriorityColor(
                 m.priority
-              )};color:white;padding:4px 10px;border-radius:12px;font-size:0.8em;">${getPriorityLabel(
+              )};color:white;padding:6px 14px;border-radius:4px;font-size:0.85em;font-weight:700;text-transform:uppercase;">${getPriorityLabel(
                     m.priority
                   )}</span>
+              <span style="color:#666;margin-left:auto;">📅 ${new Date(
+                m.date_programmee
+              ).toLocaleDateString("fr-FR", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+              })}</span>
             </div>
-            <p style="margin:5px 0;color:#333;">${m.description || "-"}</p>
-            <p style="margin:5px 0;font-size:0.85em;color:#666;">📅 ${new Date(
-              m.date_programmee
-            ).toLocaleDateString("fr-FR")}</p>
-            <div style="display:flex;gap:8px;margin-top:10px;">
+            <p style="margin:12px 0;color:#333;font-size:1.05em;line-height:1.6;">${
+              m.description || "-"
+            }</p>
+            <div style="display:flex;gap:10px;margin-top:15px;">
               <button onclick="markMaintenanceAsDone(${m.id}, ${
                     machine.id
-                  })" style="background:#10b981;color:white;padding:8px 15px;border:none;border-radius:6px;flex:1;cursor:pointer;">✓ Effectuée</button>
+                  })" style="background:#10b981;color:white;padding:10px 20px;border:none;border-radius:4px;flex:1;cursor:pointer;font-weight:700;text-transform:uppercase;">✓ Marquer effectuée</button>
               <button onclick="deleteMaintenanceItem(${m.id}, ${
                     machine.id
-                  })" style="background:#e94560;color:white;padding:8px 15px;border:none;border-radius:6px;cursor:pointer;">×</button>
+                  })" style="background:#FF6B35;color:white;padding:10px 20px;border:none;border-radius:4px;cursor:pointer;font-weight:700;">🗑️</button>
             </div>
           </div>
         `
@@ -240,14 +258,16 @@ function showMachineModal(machine, maintenances = [], files = []) {
         }
         ${
           completed.length > 0
-            ? `<div style="border-top:1px solid #ddd;padding-top:20px;margin-top:20px;"><h3>✓ Historique (${
+            ? `<div style="border-top:2px solid #F5F5F5;padding-top:30px;margin-top:30px;"><h3 style="margin-bottom:15px;">✅ Historique des maintenances (${
                 completed.length
               })</h3>${completed
                 .map(
                   (m) =>
-                    `<div style="background:#f0fdf4;padding:12px;margin-bottom:10px;border-radius:8px;border-left:4px solid #10b981;"><strong style="color:#10b981;">✓</strong><p style="margin:5px 0;color:#555;">${
+                    `<div style="background:#F0FDF4;padding:15px;margin-bottom:12px;border-radius:4px;border-left:4px solid #10b981;"><div style="display:flex;align-items:center;gap:10px;"><strong style="color:#10b981;font-size:1.2em;">✓</strong><p style="margin:0;color:#666;flex:1;">${
                       m.description || "-"
-                    }</p></div>`
+                    }</p><span style="color:#999;font-size:0.85em;">${new Date(
+                      m.date_realisee || m.date_programmee
+                    ).toLocaleDateString("fr-FR")}</span></div></div>`
                 )
                 .join("")}</div>`
             : ""
@@ -255,37 +275,46 @@ function showMachineModal(machine, maintenances = [], files = []) {
       </div>
 
       <div id="tab-files" class="tab-content" style="display:none;">
-        <h3>📄 Documents</h3>
-        <div style="border:2px dashed #ddd;padding:20px;border-radius:8px;text-align:center;margin-bottom:20px;cursor:pointer;" id="upload-area-${
+        <h3>📄 Documents techniques</h3>
+        <div style="border:2px dashed #E0E0E0;padding:30px;border-radius:4px;text-align:center;margin:20px 0;cursor:pointer;background:#FAFAFA;transition:all 0.3s;" id="upload-area-${
           machine.id
-        }">
-          <p style="margin:0;color:#666;">📤 Glissez ou cliquez</p>
+        }" onmouseover="this.style.background='#F5F5F5';this.style.borderColor='#003366';" onmouseout="this.style.background='#FAFAFA';this.style.borderColor='#E0E0E0';">
+          <div style="font-size:3em;margin-bottom:10px;">📤</div>
+          <p style="margin:0;color:#666;font-weight:600;font-size:1.05em;">Glissez un document PDF ici</p>
+          <p style="margin:5px 0 0 0;color:#999;font-size:0.9em;">ou cliquez pour sélectionner</p>
           <input type="file" id="pdf-input-${
             machine.id
           }" accept=".pdf" style="display:none;" onchange="uploadPDF(event, ${
     machine.id
   })" />
         </div>
-        <div style="display:grid;gap:10px;">
+        <div style="display:grid;gap:12px;">
           ${
             files.length === 0
-              ? "<p style='text-align:center;color:#999;'>Aucun document</p>"
+              ? "<div style='text-align:center;padding:40px;background:#F5F5F5;border-radius:4px;'><p style='color:#999;font-size:1.1em;'>📂 Aucun document disponible</p></div>"
               : files
                   .map(
                     (file) => `
-            <div style="display:flex;justify-content:space-between;align-items:center;background:#f5f5f5;padding:12px 15px;border-radius:8px;">
-              <div><p style="margin:0;color:#333;font-weight:600;">📄 ${
-                file.filename
-              }</p><p style="margin:5px 0;font-size:0.85em;color:#666;">${new Date(
-                      file.uploaded_at
-                    ).toLocaleDateString("fr-FR")}</p></div>
-              <div style="display:flex;gap:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;background:white;padding:18px 20px;border-radius:4px;border-left:4px solid #003366;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all 0.3s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 15px rgba(0,51,102,0.15)';" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)';">
+              <div style="flex:1;">
+                <p style="margin:0 0 5px 0;color:#003366;font-weight:700;font-size:1.05em;">📄 ${
+                  file.filename
+                }</p>
+                <p style="margin:0;font-size:0.85em;color:#999;">Ajouté le ${new Date(
+                  file.uploaded_at
+                ).toLocaleDateString("fr-FR", {
+                  day: "2-digit",
+                  month: "long",
+                  year: "numeric",
+                })}</p>
+              </div>
+              <div style="display:flex;gap:10px;">
                 <a href="${
                   file.path
-                }" target="_blank" style="background:#0ea5e9;color:white;text-decoration:none;padding:8px 15px;border-radius:6px;cursor:pointer;">📥</a>
+                }" target="_blank" style="background:#003366;color:white;text-decoration:none;padding:10px 18px;border-radius:4px;cursor:pointer;font-weight:700;transition:all 0.3s;" onmouseover="this.style.background='#002244';" onmouseout="this.style.background='#003366';">📥 Ouvrir</a>
                 <button onclick="deletePDF(${file.id}, ${
                       machine.id
-                    })" style="background:#e94560;color:white;padding:8px 15px;border:none;border-radius:6px;cursor:pointer;">×</button>
+                    })" style="background:#FF6B35;color:white;padding:10px 18px;border:none;border-radius:4px;cursor:pointer;font-weight:700;transition:all 0.3s;" onmouseover="this.style.background='#E55A2B';" onmouseout="this.style.background='#FF6B35';">🗑️</button>
               </div>
             </div>
           `
@@ -293,6 +322,10 @@ function showMachineModal(machine, maintenances = [], files = []) {
                   .join("")
           }
         </div>
+      </div>
+
+      <div style="margin-top:30px;padding-top:20px;border-top:2px solid #F5F5F5;text-align:center;color:#666;font-size:0.85em;">
+        <p style="margin:0;">© 2025 <strong style="color:#003366;">Tacquet Industries</strong> - Fiche machine</p>
       </div>
     </div>
   `;
@@ -310,6 +343,7 @@ function showMachineModal(machine, maintenances = [], files = []) {
       fileInput.files = e.dataTransfer.files;
       uploadPDF({ target: { files: e.dataTransfer.files } }, machine.id);
     });
+    uploadArea.addEventListener("dragover", (e) => e.preventDefault());
   }
 
   modal.onclick = (e) => {
@@ -340,13 +374,13 @@ async function openEditMachineModal(machineId) {
     document.body.appendChild(editModal);
   }
   editModal.innerHTML = `
-    <div class="modal-content" style="max-width:600px;">
-      <div class="modal-header"><h2>✏️ Modifier</h2><button class="modal-close" onclick="document.getElementById('edit-machine-modal').style.display='none'">×</button></div>
+    <div class="modal-content" style="max-width:700px;">
+      <div class="modal-header"><h2>✏️ Modifier la fiche machine</h2><button class="modal-close" onclick="document.getElementById('edit-machine-modal').style.display='none'">×</button></div>
       <form onsubmit="saveEditMachine(event, ${machineId})">
-        <div class="form-group"><label>Nom</label><input type="text" id="edit-nom" value="${escapeHtml(
+        <div class="form-group"><label>Nom de la machine</label><input type="text" id="edit-nom" value="${escapeHtml(
           machine.nom
         )}" required /></div>
-        <div class="form-group"><label>Référence</label><input type="text" id="edit-reference" value="${
+        <div class="form-group"><label>Référence constructeur</label><input type="text" id="edit-reference" value="${
           machine.reference
         }" required /></div>
         <div class="form-group"><label>Quantité</label><input type="number" id="edit-quantite" value="${
@@ -355,13 +389,13 @@ async function openEditMachineModal(machineId) {
         <div class="form-group"><label>Localisation</label><input type="text" id="edit-localisation" value="${
           machine.localisation || ""
         }" /></div>
-        <div class="form-group"><label>Prix</label><input type="number" id="edit-prix" value="${
+        <div class="form-group"><label>Valeur d'achat (€)</label><input type="number" id="edit-prix" value="${
           machine.prix || 0
         }" step="0.01" /></div>
-        <div class="form-group"><label>Seuil</label><input type="number" id="edit-seuil" value="${
+        <div class="form-group"><label>Seuil d'alerte stock</label><input type="number" id="edit-seuil" value="${
           machine.seuil_alert
         }" /></div>
-        <div class="modal-actions"><button type="button" class="btn-secondary" onclick="document.getElementById('edit-machine-modal').style.display='none'">Annuler</button><button type="submit" class="btn-primary">Enregistrer</button></div>
+        <div class="modal-actions"><button type="button" class="btn-secondary" onclick="document.getElementById('edit-machine-modal').style.display='none'">Annuler</button><button type="submit" class="btn-primary">💾 Enregistrer</button></div>
       </form>
     </div>
   `;
@@ -389,20 +423,23 @@ async function saveEditMachine(e, machineId) {
       body: JSON.stringify(data),
     });
     if (response.ok) {
-      showNotification("✓ Modifiée", "success");
+      showNotification("✓ Machine modifiée avec succès", "success");
       document.getElementById("edit-machine-modal").style.display = "none";
       await loadMachines();
       await openMachineDetails(machineId);
     }
   } catch (error) {
-    showNotification("Erreur", "error");
+    showNotification("Erreur lors de la modification", "error");
   }
 }
 
 async function uploadPDF(e, machineId) {
   const files = e.target.files;
   for (let file of files) {
-    if (!file.name.endsWith(".pdf")) continue;
+    if (!file.name.endsWith(".pdf")) {
+      showNotification("⚠️ Seuls les fichiers PDF sont acceptés", "error");
+      continue;
+    }
     const formData = new FormData();
     formData.append("file", file);
     formData.append("filename", file.name.replace(".pdf", ""));
@@ -413,27 +450,29 @@ async function uploadPDF(e, machineId) {
         body: formData,
       });
       if (response.ok) {
-        showNotification("✓ Document ajouté", "success");
+        showNotification("✓ Document ajouté avec succès", "success");
         await openMachineDetails(machineId);
       }
     } catch (error) {
-      showNotification("Erreur upload", "error");
+      showNotification("Erreur lors de l'ajout du document", "error");
     }
   }
 }
 
 async function deletePDF(fileId, machineId) {
-  if (!confirm("Supprimer ?")) return;
+  if (!confirm("Supprimer définitivement ce document ?")) return;
   try {
     const response = await fetch(`${API}/machines/files/${fileId}`, {
       method: "DELETE",
       credentials: "include",
     });
     if (response.ok) {
-      showNotification("✓ Supprimé", "success");
+      showNotification("✓ Document supprimé", "success");
       await openMachineDetails(machineId);
     }
-  } catch (error) {}
+  } catch (error) {
+    showNotification("Erreur lors de la suppression", "error");
+  }
 }
 
 function closeModalProperly() {
@@ -453,16 +492,16 @@ async function openAddMaintenanceModal(machineId) {
     document.body.appendChild(form);
   }
   form.innerHTML = `
-    <div class="modal-content" style="max-width:500px;">
-      <div class="modal-header"><h2>➕ Maintenance</h2><button class="modal-close" onclick="document.getElementById('add-maintenance-form').style.display='none'">×</button></div>
+    <div class="modal-content" style="max-width:600px;">
+      <div class="modal-header"><h2>➕ Planifier une maintenance</h2><button class="modal-close" onclick="document.getElementById('add-maintenance-form').style.display='none'">×</button></div>
       <form onsubmit="saveMaintenance(event, ${machineId})">
-        <div class="form-group"><label>Type</label><select id="maint-type" required><option value="preventive">🛡️ Préventive</option><option value="corrective">🔧 Corrective</option></select></div>
-        <div class="form-group"><label>Priorité</label><select id="maint-priority" required><option value="low">🟢 Basse</option><option value="medium" selected>🟡 Moyenne</option><option value="high">🔴 Haute</option><option value="critical">🔴🔴 Critique</option></select></div>
-        <div class="form-group"><label>Date</label><input type="date" id="maint-date" required value="${
+        <div class="form-group"><label>Type d'intervention</label><select id="maint-type" required><option value="preventive">🛡️ Maintenance préventive</option><option value="corrective">🔧 Maintenance corrective</option></select></div>
+        <div class="form-group"><label>Niveau de priorité</label><select id="maint-priority" required><option value="low">🟢 Basse</option><option value="medium" selected>🟡 Moyenne</option><option value="high">🔴 Haute</option><option value="critical">🔴🔴 Critique</option></select></div>
+        <div class="form-group"><label>Date programmée</label><input type="date" id="maint-date" required value="${
           new Date().toISOString().split("T")[0]
         }" /></div>
-        <div class="form-group"><label>Description</label><textarea id="maint-description" rows="4" required></textarea></div>
-        <div class="modal-actions"><button type="button" class="btn-secondary" onclick="document.getElementById('add-maintenance-form').style.display='none'">Annuler</button><button type="submit" class="btn-primary">Créer</button></div>
+        <div class="form-group"><label>Description de l'intervention</label><textarea id="maint-description" rows="4" placeholder="Détaillez les opérations à effectuer..." required></textarea></div>
+        <div class="modal-actions"><button type="button" class="btn-secondary" onclick="document.getElementById('add-maintenance-form').style.display='none'">Annuler</button><button type="submit" class="btn-primary">📅 Planifier</button></div>
       </form>
     </div>
   `;
@@ -489,12 +528,12 @@ async function saveMaintenance(e, machineId) {
       body: JSON.stringify(data),
     });
     if (response.ok) {
-      showNotification("✓ Maintenance créée", "success");
+      showNotification("✓ Maintenance planifiée avec succès", "success");
       document.getElementById("add-maintenance-form").style.display = "none";
       await openMachineDetails(machineId);
     }
   } catch (error) {
-    showNotification("Erreur création", "error");
+    showNotification("Erreur lors de la planification", "error");
   }
 }
 
@@ -510,51 +549,63 @@ async function markMaintenanceAsDone(maintenanceId, machineId) {
       }),
     });
     if (response.ok) {
-      showNotification("✓ Effectuée", "success");
+      showNotification("✓ Maintenance marquée comme effectuée", "success");
       openMachineDetails(machineId);
     }
-  } catch (error) {}
+  } catch (error) {
+    showNotification("Erreur lors de la mise à jour", "error");
+  }
 }
 
 async function deleteMaintenanceItem(maintenanceId, machineId) {
-  if (!confirm("Supprimer ?")) return;
+  if (!confirm("Supprimer cette maintenance du planning ?")) return;
   try {
     const response = await fetch(`${API}/maintenances/${maintenanceId}`, {
       method: "DELETE",
       credentials: "include",
     });
     if (response.ok) {
-      showNotification("✓ Supprimée", "success");
+      showNotification("✓ Maintenance supprimée", "success");
       openMachineDetails(machineId);
     }
-  } catch (error) {}
+  } catch (error) {
+    showNotification("Erreur lors de la suppression", "error");
+  }
 }
 
 async function deleteMachine(id) {
-  if (!confirm("Supprimer cette machine ?")) return;
+  if (
+    !confirm("⚠️ Supprimer définitivement cette machine du parc industriel ?")
+  )
+    return;
   try {
     const response = await fetch(`${API}/machines/${id}`, {
       method: "DELETE",
       credentials: "include",
     });
     if (response.ok) {
-      showNotification("✓ Supprimée", "success");
+      showNotification("✓ Machine supprimée avec succès", "success");
       loadMachines();
     }
-  } catch (error) {}
+  } catch (error) {
+    showNotification("Erreur lors de la suppression", "error");
+  }
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
   if (!authChecked) await checkAuth();
   await loadMachines();
+
   const searchInput = document.getElementById("search-machines");
   if (searchInput)
     searchInput.addEventListener("input", (e) =>
       handleMachineSearch(e.target.value)
     );
+
   const sortSelect = document.getElementById("sort-machines");
   if (sortSelect)
     sortSelect.addEventListener("change", (e) => sortMachines(e.target.value));
+
   const machineForm = document.getElementById("machine-form");
   if (machineForm) {
     machineForm.addEventListener("submit", async (e) => {
@@ -574,6 +625,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
       const glbFile = document.getElementById("glb_file").files[0];
       if (glbFile) formData.append("glb_file", glbFile);
+
       try {
         const response = await fetch(`${API}/machines`, {
           method: "POST",
@@ -583,10 +635,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (response.ok) {
           machineForm.reset();
           await loadMachines();
-          showNotification("✓ Machine ajoutée", "success");
+          showNotification("✓ Machine ajoutée avec succès", "success");
         }
       } catch (error) {
-        showNotification("Erreur ajout", "error");
+        showNotification("Erreur lors de l'ajout", "error");
       }
     });
   }

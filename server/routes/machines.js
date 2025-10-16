@@ -22,7 +22,7 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ 
+const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
     if (file.mimetype === "application/pdf") {
@@ -30,7 +30,7 @@ const upload = multer({
     } else {
       cb(new Error("Seuls les PDF sont acceptés"));
     }
-  }
+  },
 });
 
 // =================== MACHINES =================== //
@@ -54,14 +54,15 @@ router.get("/:id", (req, res) => {
 
 // POST créer une machine
 router.post("/", upload.single("glb_file"), (req, res) => {
-  const { nom, reference, quantite, localisation, prix, seuil_alert } = req.body;
+  const { nom, reference, quantite, localisation, prix, seuil_alert } =
+    req.body;
   const glbFile = req.file ? `/uploads/${req.file.filename}` : null;
 
   db.run(
     `INSERT INTO machines (nom, reference, quantite, localisation, prix, seuil_alert, date_creation, glb_file) 
      VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)`,
     [nom, reference, quantite, localisation, prix, seuil_alert, glbFile],
-    function(err) {
+    function (err) {
       if (err) return res.status(500).json({ error: err.message });
       res.status(201).json({ success: true, id: this.lastID });
     }
@@ -71,13 +72,22 @@ router.post("/", upload.single("glb_file"), (req, res) => {
 // PUT modifier une machine
 router.put("/:id", (req, res) => {
   try {
-    const { nom, reference, quantite, localisation, prix, seuil_alert } = req.body;
-    
+    const { nom, reference, quantite, localisation, prix, seuil_alert } =
+      req.body;
+
     db.run(
       `UPDATE machines SET nom = ?, reference = ?, quantite = ?, localisation = ?, prix = ?, seuil_alert = ?, date_modification = CURRENT_TIMESTAMP 
        WHERE id = ?`,
-      [nom, reference, quantite, localisation, prix, seuil_alert, req.params.id],
-      function(err) {
+      [
+        nom,
+        reference,
+        quantite,
+        localisation,
+        prix,
+        seuil_alert,
+        req.params.id,
+      ],
+      function (err) {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ success: true, id: req.params.id });
       }
@@ -89,24 +99,29 @@ router.put("/:id", (req, res) => {
 
 // DELETE une machine
 router.delete("/:id", (req, res) => {
-  db.get("SELECT glb_file FROM machines WHERE id = ?", [req.params.id], (err, machine) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (!machine) return res.status(404).json({ error: "Machine non trouvée" });
-
-    // Supprimer le fichier GLB physique s'il existe
-    if (machine.glb_file) {
-      const filePath = path.join(__dirname, "..", "public", machine.glb_file);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    }
-
-    // Supprimer l'enregistrement de la machine
-    db.run("DELETE FROM machines WHERE id = ?", [req.params.id], (err) => {
+  db.get(
+    "SELECT glb_file FROM machines WHERE id = ?",
+    [req.params.id],
+    (err, machine) => {
       if (err) return res.status(500).json({ error: err.message });
-      res.json({ success: true });
-    });
-  });
+      if (!machine)
+        return res.status(404).json({ error: "Machine non trouvée" });
+
+      // Supprimer le fichier GLB physique s'il existe
+      if (machine.glb_file) {
+        const filePath = path.join(__dirname, "..", "public", machine.glb_file);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      }
+
+      // Supprimer l'enregistrement de la machine
+      db.run("DELETE FROM machines WHERE id = ?", [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+      });
+    }
+  );
 });
 
 // ===== MAINTENANCES =====
@@ -131,7 +146,7 @@ router.post("/:machineId/maintenances", (req, res) => {
     `INSERT INTO maintenances (machine_id, description, date, cout, responsable, date_creation) 
      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
     [req.params.machineId, description, date, cout, responsable],
-    function(err) {
+    function (err) {
       if (err) return res.status(500).json({ error: err.message });
       res.status(201).json({ success: true, id: this.lastID });
     }
@@ -163,14 +178,15 @@ router.post("/:machineId/files", upload.single("file"), (req, res) => {
       return res.status(400).json({ error: "Aucun fichier fourni" });
     }
 
-    const filename = req.body.filename || req.file.originalname.replace(".pdf", "");
+    const filename =
+      req.body.filename || req.file.originalname.replace(".pdf", "");
     const filepath = `/uploads/${req.file.filename}`;
 
     db.run(
       `INSERT INTO machine_files (machine_id, filename, path, type, uploaded_at) 
        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
       [req.params.machineId, filename, filepath, "pdf"],
-      function(err) {
+      function (err) {
         if (err) {
           console.error("Erreur insertion DB:", err);
           return res.status(500).json({ error: err.message });
