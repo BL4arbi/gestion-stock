@@ -6,178 +6,119 @@
     <title>Connexion - Gestion de Stock</title>
     <link rel="stylesheet" href="style.css" />
     <style>
-      .login-container {
-        min-height: 100vh;
+      body {
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 20px;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       }
 
-      .login-box {
-        background: linear-gradient(165deg, #1a2332 0%, #0f1520 100%);
-        padding: 50px 45px;
-        border-radius: 24px;
-        box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6);
-        max-width: 450px;
+      .login-container {
+        background: white;
+        padding: 50px;
+        border-radius: 15px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         width: 100%;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        position: relative;
-        overflow: hidden;
+        max-width: 400px;
       }
 
-      .login-box::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 5px;
-        background: linear-gradient(90deg, #e94560 0%, #0ea5e9 100%);
-      }
-
-      .login-header {
+      .login-container h1 {
+        color: #333;
         text-align: center;
-        margin-bottom: 40px;
-      }
-
-      .login-header h1 {
+        margin-bottom: 30px;
         font-size: 2em;
-        margin-bottom: 10px;
-        color: #fff;
       }
 
-      .login-header h1::before {
-        content: "🔐 ";
+      .login-container .form-group {
+        margin-bottom: 20px;
       }
 
-      .login-header p {
-        color: rgba(255, 255, 255, 0.6);
+      .login-container label {
+        display: block;
+        color: #333;
+        font-weight: 600;
+        margin-bottom: 8px;
         font-size: 0.95em;
       }
 
-      .form-group {
-        margin-bottom: 25px;
-      }
-
-      .form-group label {
-        display: block;
-        color: rgba(255, 255, 255, 0.8);
-        font-size: 0.9em;
-        font-weight: 600;
-        margin-bottom: 10px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-      }
-
-      .login-input {
+      .login-container input {
         width: 100%;
-        padding: 16px 20px;
-        border: 1.5px solid rgba(255, 255, 255, 0.08);
-        background: rgba(255, 255, 255, 0.03);
-        border-radius: 12px;
+        padding: 14px 15px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
         font-size: 1em;
-        color: #fff;
+        color: #333;
+        background: white;
         transition: all 0.3s;
       }
 
-      .login-input:focus {
+      .login-container input:focus {
         outline: none;
-        border-color: #0ea5e9;
-        background: rgba(14, 165, 233, 0.05);
-        box-shadow: 0 8px 20px rgba(14, 165, 233, 0.15);
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
       }
 
-      .login-btn {
+      .login-container button {
         width: 100%;
-        padding: 18px;
-        background: linear-gradient(135deg, #e94560 0%, #c72848 100%);
+        padding: 14px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         border: none;
-        border-radius: 12px;
+        border-radius: 8px;
         font-size: 1em;
-        font-weight: 700;
+        font-weight: bold;
         cursor: pointer;
-        transition: all 0.3s;
-        text-transform: uppercase;
-        letter-spacing: 1px;
         margin-top: 10px;
+        transition: transform 0.2s;
       }
 
-      .login-btn:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 12px 35px rgba(233, 69, 96, 0.5);
+      .login-container button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
       }
 
-      .error-message {
-        background: rgba(233, 69, 96, 0.1);
-        border: 1px solid rgba(233, 69, 96, 0.3);
-        color: #e94560;
-        padding: 15px;
-        border-radius: 10px;
+      .login-container .error {
+        background: #fee;
+        color: #c33;
+        padding: 12px 15px;
+        border-radius: 8px;
         margin-bottom: 20px;
-        font-size: 0.9em;
+        border-left: 4px solid #e74c3c;
         display: none;
       }
 
-      .default-creds {
-        margin-top: 30px;
-        padding: 20px;
-        background: rgba(14, 165, 233, 0.08);
-        border: 1px solid rgba(14, 165, 233, 0.2);
-        border-radius: 12px;
-        font-size: 0.85em;
-      }
-
-      .default-creds p {
-        color: rgba(255, 255, 255, 0.7);
-        margin: 5px 0;
-      }
-
-      .default-creds strong {
-        color: #0ea5e9;
+      .login-container .error.show {
+        display: block;
       }
     </style>
   </head>
   <body>
     <div class="login-container">
-      <div class="login-box">
-        <div class="login-header">
-          <h1>Connexion</h1>
-          <p>Gestion de Stock</p>
+      <h1>🔐 Connexion</h1>
+      <div class="error" id="error-message"></div>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="username">Nom d'utilisateur</label>
+          <input
+            type="text"
+            id="username"
+            placeholder="admin"
+            required
+            autofocus
+          />
         </div>
-
-        <div id="error-message" class="error-message"></div>
-
-        <form id="login-form">
-          <div class="form-group">
-            <label for="username">Nom d'utilisateur</label>
-            <input
-              type="text"
-              id="username"
-              class="login-input"
-              required
-              autofocus
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="password">Mot de passe</label>
-            <input type="password" id="password" class="login-input" required />
-          </div>
-
-          <button type="submit" class="login-btn">Se connecter</button>
-        </form>
-
-        <div class="default-creds">
-          <p><strong>Première connexion :</strong></p>
-          <p>Utilisateur : <strong>admin</strong></p>
-          <p>Mot de passe : <strong>admin123</strong></p>
-          <p style="color: #e94560; margin-top: 10px">
-            ⚠️ Changez le mot de passe après connexion !
-          </p>
+        <div class="form-group">
+          <label for="password">Mot de passe</label>
+          <input
+            type="password"
+            id="password"
+            placeholder="••••••••"
+            required
+          />
         </div>
-      </div>
+        <button type="submit">Se connecter</button>
+      </form>
     </div>
 
     <script>
@@ -190,7 +131,7 @@
 
           const username = document.getElementById("username").value;
           const password = document.getElementById("password").value;
-          const errorMsg = document.getElementById("error-message");
+          const errorDiv = document.getElementById("error-message");
 
           try {
             const response = await fetch(`${API_URL}/auth/login`, {
@@ -200,19 +141,37 @@
               body: JSON.stringify({ username, password }),
             });
 
-            const data = await response.json();
-
             if (response.ok) {
+              errorDiv.classList.remove("show");
               window.location.href = "/";
             } else {
-              errorMsg.textContent = data.error || "Erreur de connexion";
-              errorMsg.style.display = "block";
+              const data = await response.json();
+              errorDiv.textContent =
+                data.error || "Identifiants invalides";
+              errorDiv.classList.add("show");
             }
           } catch (error) {
-            errorMsg.textContent = "Erreur de connexion au serveur";
-            errorMsg.style.display = "block";
+            console.error("Erreur:", error);
+            errorDiv.textContent = "Erreur de connexion au serveur";
+            errorDiv.classList.add("show");
           }
         });
+
+      // Vérifier si déjà connecté
+      async function checkAuth() {
+        try {
+          const response = await fetch(`${API_URL}/auth/check`, {
+            credentials: "include",
+          });
+          if (response.ok) {
+            window.location.href = "/";
+          }
+        } catch (error) {
+          console.error("Erreur:", error);
+        }
+      }
+
+      checkAuth();
     </script>
   </body>
 </html>

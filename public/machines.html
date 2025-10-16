@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestion des Machines</title>
+    <link rel="stylesheet" href="style.css" />
+    <script
+      type="module"
+      src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"
+    ></script>
+  </head>
+  <body>
+    <nav>
+      <a href="/">📦 Stock</a>
+      <a href="/machines.html">🤖 Machines</a>
+      <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
+    </nav>
+
+    <div class="container">
+      <header>
+        <h1>🤖 Gestion des Machines</h1>
+        <div class="header-stats">
+          <div class="stat-card">
+            <span class="stat-number" id="total-machines">0</span>
+            <span class="stat-label">Total</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="main-content">
+        <!-- SECTION AJOUT -->
+        <div class="add-section">
+          <h2>➕ Ajouter une machine</h2>
+          <form id="machine-form">
+            <div class="form-row">
+              <input
+                type="text"
+                id="nom"
+                placeholder="Nom de la machine"
+                required
+              />
+              <input
+                type="text"
+                id="reference"
+                placeholder="Référence"
+                required
+              />
+              <input
+                type="number"
+                id="quantite"
+                placeholder="Quantité"
+                required
+              />
+              <input type="text" id="localisation" placeholder="Localisation" />
+              <input
+                type="number"
+                id="prix"
+                placeholder="Prix unitaire"
+                step="0.01"
+              />
+              <input
+                type="number"
+                id="seuil_alert"
+                placeholder="Seuil d'alerte"
+                required
+              />
+              <input
+                type="file"
+                id="glb_file"
+                accept=".glb,.gltf"
+                placeholder="Modèle 3D"
+              />
+            </div>
+            <button type="submit" class="btn-primary">Ajouter machine</button>
+          </form>
+        </div>
+
+        <!-- SECTION RECHERCHE/TRI -->
+        <section class="search-section">
+          <input id="search-machines" placeholder="🔍 Rechercher..." />
+          <select id="sort-machines">
+            <option value="">📊 Trier par...</option>
+            <option value="nom">Nom (A→Z)</option>
+            <option value="reference">Référence</option>
+            <option value="prix-asc">Prix (↓)</option>
+            <option value="prix-desc">Prix (↑)</option>
+            <option value="quantite">Quantité</option>
+          </select>
+        </section>
+
+        <!-- LISTE MACHINES -->
+        <div id="machines-list"></div>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script src="machines.js" defer></script>
+  </body>
+</html>

@@ -7,6 +7,12 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
+    <nav>
+      <a href="/">📦 Stock</a>
+      <a href="/machines.html">🤖 Machines</a>
+      <button onclick="logout()" class="btn-logout">Déconnexion</button>
+    </nav>
+
     <div class="container">
       <header>
         <h1>📦 Gestion de Stock</h1>
@@ -17,7 +23,7 @@
           </div>
           <div class="stat-card alert">
             <span class="stat-number" id="low-stock">0</span>
-            <span class="stat-label">Alertes</span>
+            <span class="stat-label">Stock faible</span>
           </div>
         </div>
       </header>
@@ -28,63 +34,49 @@
           <h2>Ajouter un produit</h2>
           <form id="product-form">
             <div class="form-row">
-              <input
-                type="text"
-                id="nom"
-                placeholder="Nom du produit"
-                required
-              />
-              <input
-                type="number"
-                id="quantite"
-                placeholder="Quantité"
-                required
-              />
+              <input type="text" id="nom" placeholder="Nom du produit" required />
+              <input type="number" id="quantite" placeholder="Quantité" required />
             </div>
             <div class="form-row">
-              <input
-                type="text"
-                id="localisation"
-                placeholder="Localisation (ex: Étagère A2)"
-              />
-              <input
-                type="number"
-                id="prix"
-                placeholder="Prix unitaire"
-                step="0.01"
-              />
+              <input type="text" id="localisation" placeholder="Localisation" />
+              <input type="number" id="prix" placeholder="Prix unitaire (€)" step="0.01" />
             </div>
             <div class="form-row">
-              <input
-                type="number"
-                id="seuil"
-                placeholder="Seuil d'alerte"
-                value="10"
-              />
+              <input type="number" id="seuil" placeholder="Seuil d'alerte" value="10" />
               <button type="submit" class="btn-primary">➕ Ajouter</button>
             </div>
           </form>
         </section>
 
-        <!-- Barre de recherche -->
-        <section class="search-section">
-          <input
-            type="text"
-            id="search"
-            placeholder="🔍 Rechercher un produit..."
+        <!-- Barre de recherche et tri -->
+        <section class="search-section" style="display: flex; gap: 15px; margin-bottom: 20px;">
+          <input 
+            id="search" 
+            placeholder="🔍 Rechercher un produit ou localisation..." 
+            style="flex: 1; padding: 10px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em;"
           />
+          <select 
+            id="sort-products" 
+            style="padding: 10px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em;"
+          >
+            <option value="">📊 Trier par...</option>
+            <option value="nom">Nom (A→Z)</option>
+            <option value="prix-asc">Prix (↓)</option>
+            <option value="prix-desc">Prix (↑)</option>
+            <option value="quantite">Quantité</option>
+            <option value="faible">⚠️ Stock faible</option>
+          </select>
         </section>
 
         <!-- Liste des produits -->
         <section class="products-section">
-          <h2>Stock actuel</h2>
-          <div id="products-list" class="products-grid">
-            <!-- Les produits apparaîtront ici -->
-          </div>
+          <h2>Produits en stock</h2>
+          <div id="products-list" class="products-grid"></div>
         </section>
       </div>
     </div>
 
+    <!-- Charger app.js EN PREMIER SANS defer -->
     <script src="app.js"></script>
   </body>
 </html>
