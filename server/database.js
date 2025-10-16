@@ -113,7 +113,8 @@ db.serialize(() => {
           "INSERT INTO users (username, password, nom, role) VALUES (?, ?, ?, ?)",
           ["admin", hashed, "Administrateur", "admin"],
           (insertErr) => {
-            if (insertErr) console.error("❌ Erreur création admin:", insertErr);
+            if (insertErr)
+              console.error("❌ Erreur création admin:", insertErr);
             else console.log("👤 Admin créé : admin / admin123");
           }
         );

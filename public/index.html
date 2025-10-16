@@ -3,27 +3,49 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gestion de Stock</title>
+    <title>Gestion de Stock | Tacquet Industries</title>
     <link rel="stylesheet" href="style.css" />
+    <link rel="icon" type="image/png" href="/assets/favicon.png" />
   </head>
   <body>
     <nav>
-      <a href="/">📦 Stock</a>
+      <div class="nav-brand">
+        <img
+          src="/assets/logo-tacquet.png"
+          alt="Tacquet Industries"
+          class="nav-logo"
+        />
+        <span class="nav-company">Tacquet Industries</span>
+      </div>
+      <a href="/" class="active">📦 Stock</a>
       <a href="/machines.html">🤖 Machines</a>
-      <button onclick="logout()" class="btn-logout">Déconnexion</button>
+      <div class="user-info">
+        <span id="user-info"></span>
+        <button onclick="logout()" class="btn-logout">Déconnexion</button>
+      </div>
     </nav>
 
     <div class="container">
       <header>
-        <h1>📦 Gestion de Stock</h1>
+        <img
+          src="/assets/logo-tacquet.png"
+          alt="Tacquet Industries"
+          class="header-logo"
+        />
+        <div class="header-title">
+          <h1>📦 Gestion de Stock</h1>
+        </div>
+        <p class="header-subtitle">
+          Tacquet Industries - Système de gestion centralisé
+        </p>
         <div class="header-stats">
           <div class="stat-card">
             <span class="stat-number" id="total-products">0</span>
-            <span class="stat-label">Produits</span>
+            <span class="stat-label">Produits en stock</span>
           </div>
           <div class="stat-card alert">
             <span class="stat-number" id="low-stock">0</span>
-            <span class="stat-label">Stock faible</span>
+            <span class="stat-label">Alertes stock</span>
           </div>
         </div>
       </header>
@@ -31,52 +53,78 @@
       <div class="main-content">
         <!-- Formulaire d'ajout -->
         <section class="add-section">
-          <h2>Ajouter un produit</h2>
+          <h2>➕ Ajouter un produit</h2>
           <form id="product-form">
             <div class="form-row">
-              <input type="text" id="nom" placeholder="Nom du produit" required />
-              <input type="number" id="quantite" placeholder="Quantité" required />
+              <input
+                type="text"
+                id="nom"
+                placeholder="Nom du produit"
+                required
+              />
+              <input
+                type="number"
+                id="quantite"
+                placeholder="Quantité"
+                required
+              />
             </div>
             <div class="form-row">
               <input type="text" id="localisation" placeholder="Localisation" />
-              <input type="number" id="prix" placeholder="Prix unitaire (€)" step="0.01" />
+              <input
+                type="number"
+                id="prix"
+                placeholder="Prix unitaire (€)"
+                step="0.01"
+              />
             </div>
             <div class="form-row">
-              <input type="number" id="seuil" placeholder="Seuil d'alerte" value="10" />
-              <button type="submit" class="btn-primary">➕ Ajouter</button>
+              <input
+                type="number"
+                id="seuil"
+                placeholder="Seuil d'alerte"
+                value="10"
+              />
+              <button type="submit" class="btn-primary">
+                ➕ Ajouter au stock
+              </button>
             </div>
           </form>
         </section>
 
         <!-- Barre de recherche et tri -->
-        <section class="search-section" style="display: flex; gap: 15px; margin-bottom: 20px;">
-          <input 
-            id="search" 
-            placeholder="🔍 Rechercher un produit ou localisation..." 
-            style="flex: 1; padding: 10px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em;"
+        <section class="search-section">
+          <input
+            id="search"
+            placeholder="🔍 Rechercher un produit ou localisation..."
           />
-          <select 
-            id="sort-products" 
-            style="padding: 10px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em;"
-          >
+          <select id="sort-products">
             <option value="">📊 Trier par...</option>
             <option value="nom">Nom (A→Z)</option>
-            <option value="prix-asc">Prix (↓)</option>
-            <option value="prix-desc">Prix (↑)</option>
+            <option value="prix-asc">Prix croissant</option>
+            <option value="prix-desc">Prix décroissant</option>
             <option value="quantite">Quantité</option>
-            <option value="faible">⚠️ Stock faible</option>
+            <option value="faible">⚠️ Stock faible uniquement</option>
           </select>
         </section>
 
         <!-- Liste des produits -->
         <section class="products-section">
-          <h2>Produits en stock</h2>
+          <h2>📋 Inventaire produits</h2>
           <div id="products-list" class="products-grid"></div>
         </section>
+
+        <!-- Footer -->
+        <div class="page-footer">
+          <p>
+            © 2025 <span class="company-name">Tacquet Industries</span> - Tous
+            droits réservés
+          </p>
+          <p>Système de gestion de stock industriel</p>
+        </div>
       </div>
     </div>
 
-    <!-- Charger app.js EN PREMIER SANS defer -->
     <script src="app.js"></script>
   </body>
 </html>

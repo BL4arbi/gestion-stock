@@ -218,12 +218,12 @@ function renderProducts(products) {
         </div>
 
         <div class="product-actions">
-          <button class="btn-small btn-add" onclick="updateQuantity(${product.id}, ${
-        product.quantite + 1
-      })">➕</button>
-          <button class="btn-small btn-remove" onclick="updateQuantity(${product.id}, ${
-        product.quantite - 1
-      })">➖</button>
+          <button class="btn-small btn-add" onclick="updateQuantity(${
+            product.id
+          }, ${product.quantite + 1})">➕</button>
+          <button class="btn-small btn-remove" onclick="updateQuantity(${
+            product.id
+          }, ${product.quantite - 1})">➖</button>
           <button class="btn-small btn-delete" onclick="deleteProduct(${
             product.id
           })">🗑️</button>
@@ -303,13 +303,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Recherche produits
     const searchInput = document.getElementById("search");
     if (searchInput) {
-      searchInput.addEventListener("input", (e) => handleSearch(e.target.value));
+      searchInput.addEventListener("input", (e) =>
+        handleSearch(e.target.value)
+      );
     }
 
     // Tri produits
     const sortSelect = document.getElementById("sort-products");
     if (sortSelect) {
-      sortSelect.addEventListener("change", (e) => sortProducts(e.target.value));
+      sortSelect.addEventListener("change", (e) =>
+        sortProducts(e.target.value)
+      );
     }
   }
 });
