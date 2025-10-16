@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestion de Stock</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>📦 Gestion de Stock</h1>
+        <div class="header-stats">
+          <div class="stat-card">
+            <span class="stat-number" id="total-products">0</span>
+            <span class="stat-label">Produits</span>
+          </div>
+          <div class="stat-card alert">
+            <span class="stat-number" id="low-stock">0</span>
+            <span class="stat-label">Alertes</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="main-content">
+        <!-- Formulaire d'ajout -->
+        <section class="add-section">
+          <h2>Ajouter un produit</h2>
+          <form id="product-form">
+            <div class="form-row">
+              <input
+                type="text"
+                id="nom"
+                placeholder="Nom du produit"
+                required
+              />
+              <input
+                type="number"
+                id="quantite"
+                placeholder="Quantité"
+                required
+              />
+            </div>
+            <div class="form-row">
+              <input
+                type="text"
+                id="localisation"
+                placeholder="Localisation (ex: Étagère A2)"
+              />
+              <input
+                type="number"
+                id="prix"
+                placeholder="Prix unitaire"
+                step="0.01"
+              />
+            </div>
+            <div class="form-row">
+              <input
+                type="number"
+                id="seuil"
+                placeholder="Seuil d'alerte"
+                value="10"
+              />
+              <button type="submit" class="btn-primary">➕ Ajouter</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- Barre de recherche -->
+        <section class="search-section">
+          <input
+            type="text"
+            id="search"
+            placeholder="🔍 Rechercher un produit..."
+          />
+        </section>
+
+        <!-- Liste des produits -->
+        <section class="products-section">
+          <h2>Stock actuel</h2>
+          <div id="products-list" class="products-grid">
+            <!-- Les produits apparaîtront ici -->
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
