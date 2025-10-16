@@ -23,3 +23,39 @@ Thumbs.db
 # Build
 dist/
 build/
+# Ignorer node_modules et fichiers sensibles
+node_modules/
+.env
+*.db
+.vscode/
+.DS_Store
+*.log
+# Dependencies
+node_modules/
+
+# Uploads et fichiers utilisateurs
+uploads/
+*.glb
+*.3MF
+
+# Fichiers de base de données
+*.db
+*.sqlite
+stock.db
+
+# Variables d'environnement
+.env
+.env.local
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+logs/
+
+# Fichiers temporaires
+*.tmp
+*.temp
