@@ -12,6 +12,34 @@ const os = require("os");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Configuration de multer pour l'upload de fichiers
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, "..", "public", "assets", "uploads");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + "-" + file.originalname);
+  },
+});
+
+const upload = multer({
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [".glb", ".gltf", ".pdf", ".docx", ".xlsx"];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowedTypes.includes(ext) || file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Type de fichier non autorisé"));
+    }
+  },
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max
+});
+
 // Récupérer l'IP locale
 function getLocalIP() {
   const interfaces = os.networkInterfaces();
@@ -30,81 +58,111 @@ const LOCAL_IP = getLocalIP();
 // Middleware
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
-app.use(express.static("public"));
-
-// Sessions
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "changez-moi-en-production",
+    secret: process.env.SESSION_SECRET || "secret-key-tacquet",
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false, httpOnly: true, maxAge: 86400000 },
+    cookie: {
+      secure: false,
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000,
+    },
   })
 );
 
+// Désactive le cache pour les fichiers statiques
+app.use(
+  express.static("public", {
+    etag: false,
+    maxAge: 0,
+    setHeaders: (res) => {
+      res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+      res.set("Pragma", "no-cache");
+      res.set("Expires", "0");
+    },
+  })
+);
+
+// Middleware d'authentification
 function requireAuth(req, res, next) {
-  if (!req.session.userId) {
+  if (!req.session.user) {
     return res.status(401).json({ error: "Non authentifié" });
   }
   next();
 }
 
-// 📁 Gestion des uploads
-const uploadDir = path.join(__dirname, "uploads");
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+// Middleware de vérification des permissions
+function checkPermission(requiredRole) {
+  return (req, res, next) => {
+    if (!req.session.user) {
+      return res.status(401).json({ error: "Non authentifié" });
+    }
 
-const storage = multer.diskStorage({
-  destination: (_, __, cb) => cb(null, uploadDir),
-  filename: (_, file, cb) => cb(null, Date.now() + "-" + file.originalname),
+    const userRole = req.session.user.role;
+    const roles = {
+      viewer: 1,
+      operator: 2,
+      admin: 3,
+    };
+
+    if (roles[userRole] >= roles[requiredRole]) {
+      next();
+    } else {
+      res.status(403).json({ error: "Permission insuffisante" });
+    }
+  };
+}
+
+// Route pour récupérer les permissions de l'utilisateur
+app.get("/api/auth/permissions", (req, res) => {
+  if (!req.session.user) {
+    return res.status(401).json({ error: "Non authentifié" });
+  }
+  res.json({
+    role: req.session.user.role,
+    username: req.session.user.username,
+    permissions: {
+      canEdit:
+        req.session.user.role === "admin" ||
+        req.session.user.role === "operator",
+      canEditPrices: req.session.user.role === "admin",
+      canDelete: req.session.user.role === "admin",
+      canAddRemoveStock: req.session.user.role !== "viewer",
+      canViewOnly: req.session.user.role === "viewer",
+    },
+  });
 });
-const upload = multer({ storage });
 
-// Servir les fichiers uploadés
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
-// ============================================
-// ========== ROUTES AUTHENTIFICATION =========
-// ============================================
-
-// Login
-app.post("/api/auth/login", (req, res) => {
+// Route de login (modifie pour inclure le rôle)
+app.post("/api/auth/login", async (req, res) => {
   const { username, password } = req.body;
 
-  if (!username || !password) {
-    return res.status(400).json({ error: "Username et password requis" });
-  }
+  db.get(
+    "SELECT * FROM users WHERE username = ?",
+    [username],
+    async (err, user) => {
+      if (err) return res.status(500).json({ error: "Erreur serveur" });
+      if (!user)
+        return res.status(401).json({ error: "Identifiants incorrects" });
 
-  db.get("SELECT * FROM users WHERE username = ?", [username], (err, user) => {
-    if (err) {
-      console.error("❌ DB Error:", err);
-      return res.status(500).json({ error: "Erreur serveur" });
-    }
+      const match = await bcrypt.compare(password, user.password);
+      if (!match)
+        return res.status(401).json({ error: "Identifiants incorrects" });
 
-    if (!user) {
-      return res.status(401).json({ error: "Identifiants invalides" });
-    }
-
-    bcrypt.compare(password, user.password, (err, isMatch) => {
-      if (err) {
-        console.error("❌ Bcrypt Error:", err);
-        return res.status(500).json({ error: "Erreur serveur" });
-      }
-
-      if (!isMatch) {
-        return res.status(401).json({ error: "Identifiants invalides" });
-      }
-
-      req.session.userId = user.id;
       req.session.user = {
         id: user.id,
         username: user.username,
-        nom: user.nom,
-        role: user.role,
+        role: user.role || "user",
       };
 
-      res.json({ success: true, user: req.session.user });
-    });
-  });
+      res.json({
+        message: "Connexion réussie",
+        username: user.username,
+        role: user.role,
+      });
+    }
+  );
 });
 
 // Logout
@@ -143,9 +201,10 @@ app.get("/machines.html", (req, res) => {
 // ============================================
 
 app.get("/api/products", requireAuth, (req, res) => {
+  const category = req.query.category || "general";
   db.all(
-    "SELECT * FROM products WHERE user_id = ? ORDER BY date_ajout DESC",
-    [req.session.userId],
+    "SELECT * FROM products WHERE category = ? ORDER BY nom",
+    [category],
     (err, rows) => {
       if (err) return res.status(500).json({ error: err.message });
       res.json(rows);
@@ -153,102 +212,89 @@ app.get("/api/products", requireAuth, (req, res) => {
   );
 });
 
-app.post("/api/products", requireAuth, (req, res) => {
-  const { nom, quantite, localisation, prix, seuil } = req.body;
-  db.run(
-    `INSERT INTO products (nom, quantite, localisation, prix, seuil, user_id)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [
-      nom,
-      quantite || 0,
-      localisation,
-      prix || 0,
-      seuil || 10,
-      req.session.userId,
-    ],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ id: this.lastID, nom, quantite });
-    }
-  );
-});
+app.post(
+  "/api/products",
+  requireAuth,
+  checkPermission("operator"),
+  (req, res) => {
+    const { nom, quantite, localisation, prix, seuil_alert, category } =
+      req.body;
+    db.run(
+      "INSERT INTO products (nom, quantite, localisation, prix, seuil_alert, category) VALUES (?, ?, ?, ?, ?, ?)",
+      [
+        nom,
+        quantite,
+        localisation || null,
+        prix || 0,
+        seuil_alert || 10,
+        category || "general",
+      ],
+      function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ id: this.lastID, message: "Produit ajouté" });
+      }
+    );
+  }
+);
 
-app.put("/api/products/:id", requireAuth, (req, res) => {
-  const { nom, quantite, localisation, prix, seuil } = req.body;
-  db.run(
-    `UPDATE products SET nom=?, quantite=?, localisation=?, prix=?, seuil=?, date_modification=CURRENT_TIMESTAMP
-     WHERE id=? AND user_id=?`,
-    [
-      nom,
-      quantite,
-      localisation,
-      prix,
-      seuil,
-      req.params.id,
-      req.session.userId,
-    ],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      if (this.changes === 0)
-        return res.status(404).json({ error: "Produit non trouvé" });
-      res.json({ message: "Produit mis à jour" });
-    }
-  );
-});
+app.put(
+  "/api/products/:id",
+  requireAuth,
+  checkPermission("operator"),
+  (req, res) => {
+    const { nom, quantite, localisation, prix, seuil_alert } = req.body;
+    const { id } = req.params;
 
-app.delete("/api/products/:id", requireAuth, (req, res) => {
-  db.run(
-    "DELETE FROM products WHERE id=? AND user_id=?",
-    [req.params.id, req.session.userId],
-    function (err) {
+    // Si l'utilisateur n'est pas admin, empêche la modification du prix
+    if (req.session.user.role !== "admin" && prix !== undefined) {
+      return res
+        .status(403)
+        .json({ error: "Seul l'admin peut modifier les prix" });
+    }
+
+    let query, params;
+    if (req.session.user.role === "admin") {
+      query =
+        "UPDATE products SET nom=?, quantite=?, localisation=?, prix=?, seuil_alert=? WHERE id=?";
+      params = [nom, quantite, localisation, prix, seuil_alert, id];
+    } else {
+      query =
+        "UPDATE products SET nom=?, quantite=?, localisation=?, seuil_alert=? WHERE id=?";
+      params = [nom, quantite, localisation, seuil_alert, id];
+    }
+
+    db.run(query, params, (err) => {
       if (err) return res.status(500).json({ error: err.message });
-      if (this.changes === 0)
-        return res.status(404).json({ error: "Produit non trouvé" });
+      res.json({ message: "Produit modifié" });
+    });
+  }
+);
+
+app.delete(
+  "/api/products/:id",
+  requireAuth,
+  checkPermission("admin"),
+  (req, res) => {
+    db.run("DELETE FROM products WHERE id = ?", [req.params.id], (err) => {
+      if (err) return res.status(500).json({ error: err.message });
       res.json({ message: "Produit supprimé" });
-    }
-  );
-});
-
-app.patch("/api/products/:id/quantity", requireAuth, (req, res) => {
-  const { quantite } = req.body;
-  db.run(
-    `UPDATE products SET quantite=?, date_modification=CURRENT_TIMESTAMP
-     WHERE id=? AND user_id=?`,
-    [quantite, req.params.id, req.session.userId],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ message: "Quantité modifiée" });
-    }
-  );
-});
-
-app.get("/api/stats", requireAuth, (req, res) => {
-  db.get(
-    `SELECT 
-      COUNT(*) as total,
-      SUM(CASE WHEN quantite <= seuil THEN 1 ELSE 0 END) as low_stock
-     FROM products WHERE user_id = ?`,
-    [req.session.userId],
-    (err, row) => {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json(row);
-    }
-  );
-});
+    });
+  }
+);
 
 // ============================================
 // ========== ROUTES MACHINES =================
 // ============================================
 
+// GET toutes les machines
 app.get("/api/machines", requireAuth, (req, res) => {
-  db.all(
-    "SELECT * FROM machines WHERE user_id = ? ORDER BY created_at DESC",
-    [req.session.userId],
-    (err, rows) => {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json(rows);
+  db.all("SELECT * FROM machines ORDER BY nom", (err, rows) => {
+    if (err) {
+      console.error("Erreur GET machines:", err);
+      return res.status(500).json({ error: err.message });
     }
-  );
+    res.json(rows);
+  });
 });
 
 app.get("/api/machines/:id", requireAuth, (req, res) => {
@@ -263,69 +309,106 @@ app.get("/api/machines/:id", requireAuth, (req, res) => {
   );
 });
 
+// POST nouvelle machine
 app.post(
   "/api/machines",
   requireAuth,
+  checkPermission("admin"),
   upload.single("glb_file"),
   (req, res) => {
     const { nom, reference, quantite, localisation, prix, seuil_alert } =
       req.body;
-    const glb_path = req.file ? `/uploads/${req.file.filename}` : null;
+    const glb_path = req.file ? `/assets/uploads/${req.file.filename}` : null; // ← CHANGÉ ICI
 
     db.run(
-      `INSERT INTO machines (nom, reference, quantite, localisation, prix, seuil_alert, glb_path, user_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO machines (nom, reference, quantite, localisation, prix, seuil_alert, glb_path) 
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         nom,
         reference,
-        quantite || 0,
-        localisation,
+        quantite,
+        localisation || null,
         prix || 0,
-        seuil_alert || 1,
+        seuil_alert || 5,
         glb_path,
-        req.session.userId,
       ],
       function (err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ id: this.lastID, nom });
+        if (err) {
+          console.error("Erreur POST machine:", err);
+          return res.status(500).json({ error: err.message });
+        }
+        res.json({ id: this.lastID, message: "Machine ajoutée" });
       }
     );
   }
 );
 
-app.put("/api/machines/:id", requireAuth, (req, res) => {
-  const { nom, reference, quantite, localisation, prix, seuil_alert } =
-    req.body;
-  db.run(
-    `UPDATE machines SET nom=?, reference=?, quantite=?, localisation=?, prix=?, seuil_alert=?
-     WHERE id=? AND user_id=?`,
-    [
-      nom,
-      reference,
-      quantite,
-      localisation,
-      prix,
-      seuil_alert,
-      req.params.id,
-      req.session.userId,
-    ],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ message: "Machine mise à jour" });
-    }
-  );
-});
+// PUT modifier machine
+app.put(
+  "/api/machines/:id",
+  requireAuth,
+  checkPermission("admin"),
+  (req, res) => {
+    const { nom, reference, quantite, localisation, prix, seuil_alert } =
+      req.body;
+    const { id } = req.params;
 
-app.delete("/api/machines/:id", requireAuth, (req, res) => {
-  db.run(
-    "DELETE FROM machines WHERE id=? AND user_id=?",
-    [req.params.id, req.session.userId],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ message: "Machine supprimée" });
-    }
-  );
-});
+    db.run(
+      `UPDATE machines 
+     SET nom=?, reference=?, quantite=?, localisation=?, prix=?, seuil_alert=? 
+     WHERE id=?`,
+      [nom, reference, quantite, localisation, prix, seuil_alert, id],
+      (err) => {
+        if (err) {
+          console.error("Erreur PUT machine:", err);
+          return res.status(500).json({ error: err.message });
+        }
+        res.json({ message: "Machine modifiée" });
+      }
+    );
+  }
+);
+
+// DELETE machine
+app.delete(
+  "/api/machines/:id",
+  requireAuth,
+  checkPermission("admin"),
+  (req, res) => {
+    const { id } = req.params;
+
+    db.get(
+      "SELECT glb_path FROM machines WHERE id = ?",
+      [id],
+      (err, machine) => {
+        if (err) {
+          console.error("Erreur DELETE machine:", err);
+          return res.status(500).json({ error: err.message });
+        }
+
+        if (machine && machine.glb_path) {
+          const filePath = path.join(
+            __dirname,
+            "..",
+            "public",
+            machine.glb_path
+          ); // ← CHANGÉ ICI
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
+        }
+
+        db.run("DELETE FROM machines WHERE id = ?", [id], (err) => {
+          if (err) {
+            console.error("Erreur DELETE machine:", err);
+            return res.status(500).json({ error: err.message });
+          }
+          res.json({ message: "Machine supprimée" });
+        });
+      }
+    );
+  }
+);
 
 // ============================================
 // ========== ROUTES MAINTENANCES =============
@@ -412,7 +495,7 @@ app.post(
 
       const filename =
         req.body.filename || req.file.originalname.replace(".pdf", "");
-      const filepath = `/uploads/${req.file.filename}`;
+      const filepath = `/assets/uploads/${req.file.filename}`; // ← CHANGÉ ICI
 
       db.run(
         `INSERT INTO machine_files (machine_id, filename, path, type, uploaded_at) 

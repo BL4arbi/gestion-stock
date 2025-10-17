@@ -4,59 +4,55 @@ const API_URL = window.location.origin + "/api";
 let editingProductId = null;
 let currentUser = null;
 let allProducts = [];
-let authChecked = false; // Ajoute cette variable
+let authChecked = false;
+
+// userPermissions est maintenant dans window.userPermissions (défini dans permissions.js)
 
 // Vérifier l'authentification au chargement
 async function checkAuth() {
-  // Si déjà vérifiée, ne pas refaire l'appel
-  if (authChecked) {
-    return true;
-  }
-
   try {
-    const response = await fetch(`${API_URL}/auth/check`, {
+    const response = await fetch(`${window.location.origin}/api/auth/check`, {
       credentials: "include",
     });
 
     if (response.ok) {
       const data = await response.json();
-      currentUser = data;
+      const userElement = document.getElementById("current-user");
+      if (userElement) {
+        userElement.textContent = data.username;
+      }
       authChecked = true;
-      displayUserInfo();
+
+      // Charge les permissions après l'auth
+      if (typeof loadPermissions === "function") {
+        await loadPermissions();
+      }
+
       return true;
     } else {
-      authChecked = true;
       window.location.href = "/login.html";
       return false;
     }
   } catch (error) {
-    console.error("❌ Erreur authentification:", error);
-    // Ne pas afficher l'erreur, juste rediriger
-    authChecked = true;
+    console.error("Erreur:", error);
     window.location.href = "/login.html";
     return false;
-  }
-}
-
-// Afficher les infos utilisateur
-function displayUserInfo() {
-  const userInfo = document.getElementById("user-info");
-  if (userInfo && currentUser) {
-    userInfo.innerHTML = `👤 ${currentUser.username}`;
   }
 }
 
 // Déconnexion
 async function logout() {
   try {
-    await fetch(`${API_URL}/auth/logout`, {
+    const response = await fetch(`${window.location.origin}/api/auth/logout`, {
       method: "POST",
       credentials: "include",
     });
+
+    if (response.ok) {
+      window.location.href = "/login.html";
+    }
   } catch (error) {
     console.error("Erreur déconnexion:", error);
-  } finally {
-    authChecked = false;
     window.location.href = "/login.html";
   }
 }
@@ -104,7 +100,7 @@ function handleSearch(searchText) {
   const filtered = allProducts.filter(
     (p) =>
       p.nom.toLowerCase().includes(text) ||
-      p.localisation.toLowerCase().includes(text)
+      (p.localisation && p.localisation.toLowerCase().includes(text))
   );
   renderProducts(filtered);
 }
@@ -127,7 +123,7 @@ function sortProducts(sortBy) {
       sorted.sort((a, b) => a.quantite - b.quantite);
       break;
     case "faible":
-      sorted = sorted.filter((p) => p.quantite <= p.seuil);
+      sorted = sorted.filter((p) => p.quantite <= p.seuil_alert);
       break;
   }
 
@@ -142,7 +138,7 @@ async function addProduct(e) {
   const quantite = parseInt(document.getElementById("quantite").value);
   const localisation = document.getElementById("localisation").value;
   const prix = parseFloat(document.getElementById("prix").value) || 0;
-  const seuil = parseInt(document.getElementById("seuil").value);
+  const seuil_alert = parseInt(document.getElementById("seuil").value) || 10;
 
   try {
     const response = await fetch(`${API_URL}/products`, {
@@ -154,7 +150,8 @@ async function addProduct(e) {
         quantite,
         localisation,
         prix,
-        seuil,
+        seuil_alert,
+        category: "general",
       }),
     });
 
@@ -188,25 +185,36 @@ function renderProducts(products) {
     return;
   }
 
-  const lowStockCount = products.filter((p) => p.quantite <= p.seuil).length;
+  const lowStockCount = products.filter(
+    (p) => p.quantite <= (p.seuil_alert || 10)
+  ).length;
   const totalProducts = products.length;
 
-  document.getElementById("total-products").textContent = totalProducts;
-  document.getElementById("low-stock").textContent = lowStockCount;
+  const totalElem = document.getElementById("total-products");
+  const lowStockElem = document.getElementById("low-stock");
+
+  if (totalElem) totalElem.textContent = totalProducts;
+  if (lowStockElem) lowStockElem.textContent = lowStockCount;
+
+  // Vérifie que userPermissions est défini
+  const perms = window.userPermissions || {
+    canAddRemoveStock: false,
+    canDelete: false
+  };
 
   container.innerHTML = products
     .map((product) => {
-      const isLowStock = product.quantite <= product.seuil;
+      const isLowStock = product.quantite <= (product.seuil_alert || 10);
 
       return `
       <div class="product-card ${isLowStock ? "low-stock" : ""}">
         <div class="product-header">
-          <h3 class="product-name">${product.nom}</h3>
+          <h3 class="product-name">${escapeHtml(product.nom)}</h3>
           <span class="product-quantity">${product.quantite}</span>
         </div>
 
         <div class="product-info">
-          <strong>📍</strong> ${product.localisation}
+          <strong>📍</strong> ${escapeHtml(product.localisation || "N/A")}
         </div>
 
         <div class="product-info">
@@ -214,19 +222,29 @@ function renderProducts(products) {
         </div>
 
         <div class="product-info">
-          <strong>⚠️</strong> Seuil: ${product.seuil}
+          <strong>⚠️</strong> Seuil: ${product.seuil_alert || 10}
         </div>
 
         <div class="product-actions">
-          <button class="btn-small btn-add" onclick="updateQuantity(${
-            product.id
-          }, ${product.quantite + 1})">➕</button>
-          <button class="btn-small btn-remove" onclick="updateQuantity(${
-            product.id
-          }, ${product.quantite - 1})">➖</button>
-          <button class="btn-small btn-delete" onclick="deleteProduct(${
-            product.id
-          })">🗑️</button>
+          ${
+            perms.canAddRemoveStock
+              ? `
+            <button class="btn-small btn-add" onclick="updateQuantity(${
+              product.id
+            }, ${product.quantite + 1})">➕</button>
+            <button class="btn-small btn-remove" onclick="updateQuantity(${
+              product.id
+            }, ${product.quantite - 1})">➖</button>
+          `
+              : ""
+          }
+          ${
+            perms.canDelete
+              ? `
+            <button class="btn-small btn-delete" onclick="deleteProduct(${product.id})">🗑️</button>
+          `
+              : ""
+          }
         </div>
       </div>
     `;
@@ -236,6 +254,7 @@ function renderProducts(products) {
 
 // Échapper le HTML pour éviter les injections
 function escapeHtml(text) {
+  if (!text) return "";
   const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
@@ -249,15 +268,25 @@ async function updateQuantity(id, newQuantity) {
   }
 
   try {
+    const product = allProducts.find((p) => p.id === id);
+    if (!product) return;
+
     const response = await fetch(`${API_URL}/products/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ quantite: newQuantity }),
+      body: JSON.stringify({
+        nom: product.nom,
+        quantite: newQuantity,
+        localisation: product.localisation,
+        prix: product.prix,
+        seuil_alert: product.seuil_alert,
+      }),
     });
 
     if (response.ok) {
       await loadProducts();
+      showNotification("✅ Quantité mise à jour", "success");
     }
   } catch (error) {
     console.error("Erreur:", error);
@@ -317,3 +346,4 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 });
+

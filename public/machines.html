@@ -3,34 +3,51 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gestion des Machines</title>
-    <link rel="stylesheet" href="style.css" />
-    <script
-      type="module"
-      src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"
-    ></script>
+    <title>Gestion des Machines - Tacquet Industries</title>
+    <link rel="stylesheet" href="/css/main.css?v=11" />
+    <link rel="icon" type="image/png" href="/assets/favicon.png" />
   </head>
   <body>
+    <!-- NAVIGATION (identique à index.html) -->
     <nav>
-      <a href="/">📦 Stock</a>
-      <a href="/machines.html">🤖 Machines</a>
-      <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
+      <div class="nav-container">
+        <div class="nav-brand">
+          <img
+            src="/assets/logo.png"
+            alt="Logo Tacquet Industries"
+            class="nav-logo"
+          />
+          <span class="nav-company">Tacquet Industries</span>
+        </div>
+        <a href="/">📦 Stock</a>
+        <a href="/machines.html" class="active">🤖 Machines</a>
+        <div class="user-info">
+          <span>👤 <span id="current-user">Admin</span></span>
+          <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
+        </div>
+      </div>
     </nav>
 
-    <div class="container">
-      <header>
+    <!-- HEADER -->
+    <header>
+      <div class="header-content">
         <h1>🤖 Gestion des Machines</h1>
+        <p class="header-subtitle">
+          Système de gestion centralisé et professionnel
+        </p>
         <div class="header-stats">
           <div class="stat-card">
             <span class="stat-number" id="total-machines">0</span>
-            <span class="stat-label">Total</span>
+            <span class="stat-label">Total machines</span>
           </div>
         </div>
-      </header>
+      </div>
+    </header>
 
+    <div class="container">
       <div class="main-content">
-        <!-- SECTION AJOUT -->
-        <div class="add-section">
+        <!-- Formulaire d'ajout -->
+        <section class="add-section">
           <h2>➕ Ajouter une machine</h2>
           <form id="machine-form">
             <div class="form-row">
@@ -74,9 +91,9 @@
             </div>
             <button type="submit" class="btn-primary">Ajouter machine</button>
           </form>
-        </div>
+        </section>
 
-        <!-- SECTION RECHERCHE/TRI -->
+        <!-- Recherche/Tri -->
         <section class="search-section">
           <input id="search-machines" placeholder="🔍 Rechercher..." />
           <select id="sort-machines">
@@ -89,12 +106,25 @@
           </select>
         </section>
 
-        <!-- LISTE MACHINES -->
+        <!-- Liste machines -->
         <div id="machines-list"></div>
       </div>
     </div>
 
-    <script src="app.js"></script>
-    <script src="machines.js" defer></script>
+    <div class="page-footer">
+      <p>
+        © 2025 <span class="company-name">TACQUET INDUSTRIES</span> - Tous
+        droits réservés
+      </p>
+      <p>Système de gestion de stock et machines industrielles</p>
+    </div>
+
+    <script
+      type="module"
+      src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"
+    ></script>
+    <script src="/js/permissions.js"></script>
+    <script src="/js/app.js"></script>
+    <script src="/js/machines.js"></script>
   </body>
 </html>

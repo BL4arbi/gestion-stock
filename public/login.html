@@ -3,175 +3,84 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Connexion - Gestion de Stock</title>
-    <link rel="stylesheet" href="style.css" />
-    <style>
-      body {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 100vh;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      }
-
-      .login-container {
-        background: white;
-        padding: 50px;
-        border-radius: 15px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        width: 100%;
-        max-width: 400px;
-      }
-
-      .login-container h1 {
-        color: #333;
-        text-align: center;
-        margin-bottom: 30px;
-        font-size: 2em;
-      }
-
-      .login-container .form-group {
-        margin-bottom: 20px;
-      }
-
-      .login-container label {
-        display: block;
-        color: #333;
-        font-weight: 600;
-        margin-bottom: 8px;
-        font-size: 0.95em;
-      }
-
-      .login-container input {
-        width: 100%;
-        padding: 14px 15px;
-        border: 2px solid #ddd;
-        border-radius: 8px;
-        font-size: 1em;
-        color: #333;
-        background: white;
-        transition: all 0.3s;
-      }
-
-      .login-container input:focus {
-        outline: none;
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-      }
-
-      .login-container button {
-        width: 100%;
-        padding: 14px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 1em;
-        font-weight: bold;
-        cursor: pointer;
-        margin-top: 10px;
-        transition: transform 0.2s;
-      }
-
-      .login-container button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-      }
-
-      .login-container .error {
-        background: #fee;
-        color: #c33;
-        padding: 12px 15px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        border-left: 4px solid #e74c3c;
-        display: none;
-      }
-
-      .login-container .error.show {
-        display: block;
-      }
-    </style>
+    <title>Connexion - Tacquet Industries</title>
+    <link rel="stylesheet" href="/css/main.css?v=12" />
+    <link rel="icon" type="image/png" href="/assets/favicon.png" />
   </head>
-  <body>
+  <body class="login-page">
     <div class="login-container">
-      <h1>🔐 Connexion</h1>
-      <div class="error" id="error-message"></div>
-      <form id="login-form">
+      <div class="login-logo">
+        <img src="/assets/logo.png" alt="Logo" />
+      </div>
+
+      <h1 class="login-title">Bienvenue</h1>
+      <p class="login-subtitle">Connectez-vous à votre compte</p>
+
+      <form class="login-form" id="login-form">
         <div class="form-group">
-          <label for="username">Nom d'utilisateur</label>
+          <label for="username">👤 Nom d'utilisateur</label>
           <input
             type="text"
             id="username"
-            placeholder="admin"
+            name="username"
+            placeholder="Entrez votre nom d'utilisateur"
             required
-            autofocus
+            autocomplete="username"
           />
         </div>
+
         <div class="form-group">
-          <label for="password">Mot de passe</label>
+          <label for="password">🔒 Mot de passe</label>
           <input
             type="password"
             id="password"
-            placeholder="••••••••"
+            name="password"
+            placeholder="Entrez votre mot de passe"
             required
+            autocomplete="current-password"
           />
         </div>
-        <button type="submit">Se connecter</button>
+
+        <button type="submit" class="btn-login">Se connecter</button>
+
+        <div class="error-message" id="error-message"></div>
       </form>
+
+      <p class="footer-text">© 2025 Tacquet Industries</p>
     </div>
 
     <script>
-      const API_URL = window.location.origin + "/api";
+      const form = document.getElementById("login-form");
+      const errorMsg = document.getElementById("error-message");
 
-      document
-        .getElementById("login-form")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        errorMsg.classList.remove("show");
 
-          const username = document.getElementById("username").value;
-          const password = document.getElementById("password").value;
-          const errorDiv = document.getElementById("error-message");
+        const username = document.getElementById("username").value;
+        const password = document.getElementById("password").value;
 
-          try {
-            const response = await fetch(`${API_URL}/auth/login`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({ username, password }),
-            });
-
-            if (response.ok) {
-              errorDiv.classList.remove("show");
-              window.location.href = "/";
-            } else {
-              const data = await response.json();
-              errorDiv.textContent =
-                data.error || "Identifiants invalides";
-              errorDiv.classList.add("show");
-            }
-          } catch (error) {
-            console.error("Erreur:", error);
-            errorDiv.textContent = "Erreur de connexion au serveur";
-            errorDiv.classList.add("show");
-          }
-        });
-
-      // Vérifier si déjà connecté
-      async function checkAuth() {
         try {
-          const response = await fetch(`${API_URL}/auth/check`, {
+          const response = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             credentials: "include",
+            body: JSON.stringify({ username, password }),
           });
+
+          const data = await response.json();
+
           if (response.ok) {
             window.location.href = "/";
+          } else {
+            errorMsg.textContent = data.error || "Erreur de connexion";
+            errorMsg.classList.add("show");
           }
         } catch (error) {
-          console.error("Erreur:", error);
+          errorMsg.textContent = "Erreur de connexion au serveur";
+          errorMsg.classList.add("show");
         }
-      }
-
-      checkAuth();
+      });
     </script>
   </body>
 </html>

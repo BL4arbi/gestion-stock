@@ -3,40 +3,48 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gestion de Stock | Tacquet Industries</title>
-    <link rel="stylesheet" href="style.css" />
+    <title>Gestion Stock - Tacquet Industries</title>
+    <link rel="stylesheet" href="/css/main.css?v=12" />
     <link rel="icon" type="image/png" href="/assets/favicon.png" />
   </head>
   <body>
+    <!-- NAVIGATION -->
     <nav>
-      <div class="nav-brand">
-        <img
-          src="/assets/logo-tacquet.png"
-          alt="Tacquet Industries"
-          class="nav-logo"
-        />
-        <span class="nav-company">Tacquet Industries</span>
-      </div>
-      <a href="/" class="active">📦 Stock</a>
-      <a href="/machines.html">🤖 Machines</a>
-      <div class="user-info">
-        <span id="user-info"></span>
-        <button onclick="logout()" class="btn-logout">Déconnexion</button>
+      <div class="nav-container">
+        <div class="nav-brand">
+          <img
+            src="/assets/logo.png"
+            alt="Logo Tacquet Industries"
+            class="nav-logo"
+          />
+          <span class="nav-company">Tacquet Industries</span>
+        </div>
+
+        <!-- Menu déroulant Stock -->
+        <div class="nav-dropdown">
+          <a href="/" class="nav-link active">📦 Stock</a>
+          <div class="dropdown-content">
+            <a href="/">📋 Stock Général</a>
+            <a href="/stock-epi.html">🦺 EPI</a>
+            <a href="/stock-visserie.html">🔩 Visserie</a>
+          </div>
+        </div>
+
+        <a href="/machines.html">🤖 Machines</a>
+
+        <div class="user-info">
+          <span>👤 <span id="current-user">Admin</span></span>
+          <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
+        </div>
       </div>
     </nav>
 
-    <div class="container">
-      <header>
-        <img
-          src="/assets/logo-tacquet.png"
-          alt="Tacquet Industries"
-          class="header-logo"
-        />
-        <div class="header-title">
-          <h1>📦 Gestion de Stock</h1>
-        </div>
+    <!-- HEADER (pas de logo ici, juste les stats) -->
+    <header>
+      <div class="header-content">
+        <h1>📦 Gestion de Stock</h1>
         <p class="header-subtitle">
-          Tacquet Industries - Système de gestion centralisé
+          Système de gestion centralisé et professionnel
         </p>
         <div class="header-stats">
           <div class="stat-card">
@@ -48,8 +56,10 @@
             <span class="stat-label">Alertes stock</span>
           </div>
         </div>
-      </header>
+      </div>
+    </header>
 
+    <div class="container">
       <div class="main-content">
         <!-- Formulaire d'ajout -->
         <section class="add-section">
@@ -113,18 +123,19 @@
           <h2>📋 Inventaire produits</h2>
           <div id="products-list" class="products-grid"></div>
         </section>
-
-        <!-- Footer -->
-        <div class="page-footer">
-          <p>
-            © 2025 <span class="company-name">Tacquet Industries</span> - Tous
-            droits réservés
-          </p>
-          <p>Système de gestion de stock industriel</p>
-        </div>
       </div>
     </div>
 
-    <script src="app.js"></script>
+    <!-- Footer -->
+    <div class="page-footer">
+      <p>
+        © 2025 <span class="company-name">TACQUET INDUSTRIES</span> - Tous
+        droits réservés
+      </p>
+      <p>Système de gestion de stock et machines industrielles</p>
+    </div>
+
+    <script src="/js/permissions.js"></script>
+    <script src="/js/app.js"></script>
   </body>
 </html>
