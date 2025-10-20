@@ -58,16 +58,20 @@ async function logout() {
 }
 
 // Afficher les notifications
-function showNotification(message, type = "info") {
+function showNotification(message, type = "info", duration = 4000) {
+  const container = document.getElementById("notifications");
   const notification = document.createElement("div");
   notification.className = `notification ${type}`;
   notification.textContent = message;
-  document.body.appendChild(notification);
+
+  container.appendChild(notification);
 
   setTimeout(() => {
-    notification.style.animation = "slideOut 0.3s ease-in-out";
-    setTimeout(() => notification.remove(), 300);
-  }, 3000);
+    notification.classList.add("fade-out");
+    setTimeout(() => {
+      notification.remove();
+    }, 300);
+  }, duration);
 }
 
 // Charger les produits depuis l'API
@@ -199,7 +203,7 @@ function renderProducts(products) {
   // Vérifie que userPermissions est défini
   const perms = window.userPermissions || {
     canAddRemoveStock: false,
-    canDelete: false
+    canDelete: false,
   };
 
   container.innerHTML = products
@@ -346,4 +350,3 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 });
-

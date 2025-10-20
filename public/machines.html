@@ -3,24 +3,29 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gestion des Machines - Tacquet Industries</title>
-    <link rel="stylesheet" href="/css/main.css?v=11" />
+    <title>Machines - Tacquet Industries</title>
+    <link rel="stylesheet" href="/css/main.css?v=14" />
     <link rel="icon" type="image/png" href="/assets/favicon.png" />
   </head>
   <body>
-    <!-- NAVIGATION (identique à index.html) -->
     <nav>
       <div class="nav-container">
         <div class="nav-brand">
-          <img
-            src="/assets/logo.png"
-            alt="Logo Tacquet Industries"
-            class="nav-logo"
-          />
+          <img src="/assets/logo.png" alt="Logo" class="nav-logo" />
           <span class="nav-company">Tacquet Industries</span>
         </div>
-        <a href="/">📦 Stock</a>
+
+        <div class="nav-dropdown">
+          <a href="/"> 📦 Stock <span class="dropdown-arrow">▼</span> </a>
+          <div class="nav-dropdown-content">
+            <a href="/">📦 Stock Général</a>
+            <a href="/stock-epi.html">🦺 EPI</a>
+            <a href="/stock-visserie.html">🔩 Visserie</a>
+          </div>
+        </div>
+
         <a href="/machines.html" class="active">🤖 Machines</a>
+
         <div class="user-info">
           <span>👤 <span id="current-user">Admin</span></span>
           <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
@@ -28,13 +33,10 @@
       </div>
     </nav>
 
-    <!-- HEADER -->
     <header>
       <div class="header-content">
-        <h1>🤖 Gestion des Machines</h1>
-        <p class="header-subtitle">
-          Système de gestion centralisé et professionnel
-        </p>
+        <h1>🤖 Machines</h1>
+        <p class="header-subtitle">Gestion des machines industrielles</p>
         <div class="header-stats">
           <div class="stat-card">
             <span class="stat-number" id="total-machines">0</span>
@@ -54,21 +56,23 @@
               <input
                 type="text"
                 id="nom"
-                placeholder="Nom de la machine"
+                placeholder="Nom de la machine *"
                 required
               />
               <input
                 type="text"
                 id="reference"
-                placeholder="Référence"
+                placeholder="Référence *"
                 required
               />
               <input
                 type="number"
                 id="quantite"
-                placeholder="Quantité"
+                placeholder="Quantité *"
                 required
               />
+            </div>
+            <div class="form-row">
               <input type="text" id="localisation" placeholder="Localisation" />
               <input
                 type="number"
@@ -80,22 +84,35 @@
                 type="number"
                 id="seuil_alert"
                 placeholder="Seuil d'alerte"
-                required
-              />
-              <input
-                type="file"
-                id="glb_file"
-                accept=".glb,.gltf"
-                placeholder="Modèle 3D"
+                value="5"
               />
             </div>
-            <button type="submit" class="btn-primary">Ajouter machine</button>
+            <div class="form-row">
+              <div class="form-group" style="flex: 1">
+                <label>Modèle 3D (.GLB)</label>
+                <input type="file" id="glb_file" accept=".glb,.gltf" />
+              </div>
+              <div class="form-group" style="flex: 1">
+                <label>Lien SolidWorks (Chemin local)</label>
+                <input
+                  type="text"
+                  id="solidworks_link"
+                  placeholder="Ex: C:\Projets\assemblage.SLDASM"
+                />
+              </div>
+            </div>
+            <button type="submit" class="btn-primary">
+              Ajouter la machine
+            </button>
           </form>
         </section>
 
         <!-- Recherche/Tri -->
         <section class="search-section">
-          <input id="search-machines" placeholder="🔍 Rechercher..." />
+          <input
+            id="search-machines"
+            placeholder="🔍 Rechercher une machine..."
+          />
           <select id="sort-machines">
             <option value="">📊 Trier par...</option>
             <option value="nom">Nom (A→Z)</option>

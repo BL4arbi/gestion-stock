@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Stock EPI - Tacquet Industries</title>
-    <link rel="stylesheet" href="/css/main.css?v=12" />
+    <link rel="stylesheet" href="/css/main.css?v=14" />
     <link rel="icon" type="image/png" href="/assets/favicon.png" />
   </head>
   <body>
@@ -15,10 +15,20 @@
           <img src="/assets/logo.png" alt="Logo Tacquet Industries" class="nav-logo" />
           <span class="nav-company">Tacquet Industries</span>
         </div>
-        <a href="/">📦 Stock</a>
+        
+        <div class="nav-dropdown">
+          <a href="/" class="active">
+            📦 Stock <span class="dropdown-arrow">▼</span>
+          </a>
+          <div class="nav-dropdown-content">
+            <a href="/">📦 Stock Général</a>
+            <a href="/stock-epi.html">🦺 EPI</a>
+            <a href="/stock-visserie.html">🔩 Visserie</a>
+          </div>
+        </div>
+        
         <a href="/machines.html">🤖 Machines</a>
-        <a href="/stock-epi.html" class="active">🦺 EPI</a>
-        <a href="/stock-visserie.html">🔩 Visserie</a>
+        
         <div class="user-info">
           <span>👤 <span id="current-user">Admin</span></span>
           <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>

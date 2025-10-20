@@ -700,6 +700,78 @@ textarea:focus {
   background: #c0392b;
 }
 
+/* Machine card info compacte */
+.machine-info-compact {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+
+.machine-info-compact span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Boutons actions machine */
+.machine-actions-bottom {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-compact {
+  flex: 1;
+  min-width: 90px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.btn-compact:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-compact:not(.edit):not(.delete) {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-compact:not(.edit):not(.delete):hover {
+  background: #2563eb;
+}
+
+.btn-compact.edit {
+  background: #f59e0b;
+  color: white;
+}
+
+.btn-compact.edit:hover {
+  background: #d97706;
+}
+
+.btn-compact.delete {
+  background: #ef4444;
+  color: white;
+}
+
+.btn-compact.delete:hover {
+  background: #dc2626;
+}
+
 /* Assure que model-viewer prend tout l'espace */
 model-viewer {
   width: 100%;
@@ -887,80 +959,83 @@ img[src*="favicon"] {
   display: inline-block;
 }
 
-.nav-dropdown .nav-link {
-  padding: 10px 20px;
-  color: white;
-  text-decoration: none;
-  font-weight: 600;
-  transition: all 0.3s;
-  border-radius: 8px;
-  display: inline-block;
+.nav-dropdown > a {
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
-.nav-dropdown:hover .nav-link,
-.nav-dropdown .nav-link.active {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.dropdown-content {
+.nav-dropdown-content {
   display: none;
-  position: absolute;
-  top: calc(100% + 5px);
-  left: 0;
-  background: white;
-  min-width: 220px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-  border-radius: 8px;
-  overflow: hidden;
-  z-index: 1000;
-  padding: 8px 0;
-}
-
-/* Zone invisible pour éviter que le menu disparaisse */
-.nav-dropdown::after {
-  content: "";
   position: absolute;
   top: 100%;
   left: 0;
-  right: 0;
-  height: 10px;
-  background: transparent;
+  background: white;
+  min-width: 180px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  margin-top: 8px;
+  z-index: 1000;
+  overflow: hidden;
 }
 
-.nav-dropdown:hover .dropdown-content,
-.dropdown-content:hover {
-  display: block;
-  animation: slideDown 0.3s ease;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.dropdown-content a {
-  display: block;
+.nav-dropdown-content a {
+  color: #1e3a8a;
   padding: 12px 20px;
-  color: #333;
   text-decoration: none;
-  transition: all 0.2s;
-  font-weight: 500;
+  display: block;
+  transition: background 0.2s;
+  border-bottom: 1px solid #e5e7eb;
 }
 
-.dropdown-content a:hover {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding-left: 25px;
+.nav-dropdown-content a:last-child {
+  border-bottom: none;
 }
 
-/* Indicateur actif dans le dropdown */
-.dropdown-content a[style*="background"] {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-  color: white !important;
+.nav-dropdown-content a:hover {
+  background: #f3f4f6;
+}
+
+.nav-dropdown:hover .nav-dropdown-content {
+  display: block;
+}
+
+.dropdown-arrow {
+  font-size: 0.8em;
+  transition: transform 0.2s;
+}
+
+.nav-dropdown:hover .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+/* Drag & Drop Zones */
+.drop-zone {
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 30px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: #f8fafc;
+  margin-top: 10px;
+}
+
+.drop-zone:hover {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.drop-zone-active {
+  border-color: #10b981;
+  background: #d1fae5;
+  transform: scale(1.02);
+}
+
+.drop-zone-content {
+  pointer-events: none;
+}
+
+.drop-zone p {
+  margin: 0;
 }

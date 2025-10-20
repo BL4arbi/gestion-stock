@@ -33,9 +33,18 @@ function updateStats(machines) {
 function renderMachines(machines) {
   const container = document.getElementById("machines-list");
 
-  if (!container) return;
+  console.log('🔍 renderMachines appelée');
+  console.log('Container trouvé:', !!container);
+  console.log('Nombre de machines:', machines ? machines.length : 0);
+  console.log('Machines:', machines);
+
+  if (!container) {
+    console.error('❌ Container "machines-list" non trouvé!');
+    return;
+  }
 
   if (!machines || machines.length === 0) {
+    console.log('📭 Aucune machine à afficher');
     container.innerHTML = `
       <div class="empty-state">
         <div class="empty-state-icon">🤖</div>
@@ -46,10 +55,13 @@ function renderMachines(machines) {
     return;
   }
 
-  // Vérifie que userPermissions est défini
   const perms = window.userPermissions || {
     canDelete: false,
+    canEdit: false,
   };
+
+  console.log('✅ Rendu de', machines.length, 'machine(s)');
+  console.log('Permissions:', perms);
 
   container.innerHTML = machines
     .map(
@@ -65,13 +77,28 @@ function renderMachines(machines) {
         
         <div class="machine-footer">
           <div class="machine-title">${escapeHtml(machine.nom)}</div>
+          <div class="machine-info-compact">
+            <span>📦 Qté: ${machine.quantite}</span>
+            <span>💰 ${parseFloat(machine.prix || 0).toFixed(2)}€</span>
+          </div>
           <div class="machine-actions-bottom">
             <button class="btn-compact" onclick="openMachineDetails(${
               machine.id
-            })" title="Détails">📋 Détails</button>
+            })" title="Voir les détails">
+              👁️ Détails
+            </button>
+            ${
+              perms.canEdit
+                ? `<button class="btn-compact edit" onclick="editMachine(${machine.id})" title="Modifier">
+                ✏️ Modifier
+              </button>`
+                : ""
+            }
             ${
               perms.canDelete
-                ? `<button class="btn-compact delete" onclick="deleteMachine(${machine.id})" title="Supprimer">🗑️</button>`
+                ? `<button class="btn-compact delete" onclick="deleteMachine(${machine.id})" title="Supprimer">
+                🗑️ Suppr.
+              </button>`
                 : ""
             }
           </div>
@@ -80,6 +107,8 @@ function renderMachines(machines) {
     `
     )
     .join("");
+  
+  console.log('✅ HTML inséré dans le container');
 }
 
 // Échapper HTML
@@ -92,27 +121,139 @@ function escapeHtml(text) {
 
 // Supprimer une machine
 async function deleteMachine(id) {
-  if (!confirm("Supprimer cette machine ?")) return;
+  const machine = allMachines.find((m) => m.id === id);
+  const machineName = machine ? machine.nom : `#${id}`;
+
+  if (
+    !confirm(
+      `⚠️ SUPPRIMER LA MACHINE ?\n\n${machineName}\n\nCette action est irréversible !`
+    )
+  ) {
+    return;
+  }
 
   try {
+    console.log("Suppression de la machine:", id);
+
     const response = await fetch(`${API}/machines/${id}`, {
       method: "DELETE",
       credentials: "include",
     });
 
+    console.log("Réponse suppression:", response.status);
+
     if (response.ok) {
-      showNotification("✅ Machine supprimée", "success");
-      await loadMachines();
+      showNotification("✅ Machine supprimée avec succès", "success");
+      await loadMachines(); // Recharge la liste
     } else {
-      showNotification("❌ Erreur suppression", "error");
+      const error = await response.json();
+      console.error("Erreur serveur:", error);
+      showNotification(
+        `❌ Erreur: ${error.error || "Impossible de supprimer"}`,
+        "error"
+      );
     }
   } catch (error) {
-    console.error("Erreur:", error);
-    showNotification("Erreur connexion", "error");
+    console.error("Erreur réseau:", error);
+    showNotification("❌ Erreur de connexion au serveur", "error");
   }
 }
 
-// Ouvrir les détails d'une machine
+// ============ FONCTION MODIFICATION ============
+async function editMachine(id) {
+  const machine = allMachines.find((m) => m.id === id);
+  if (!machine) return;
+
+  // Remplis le formulaire avec les données existantes
+  document.getElementById("nom").value = machine.nom;
+  document.getElementById("reference").value = machine.reference;
+  document.getElementById("quantite").value = machine.quantite;
+  document.getElementById("localisation").value = machine.localisation || "";
+  document.getElementById("prix").value = machine.prix || 0;
+  document.getElementById("seuil_alert").value = machine.seuil_alert || 5;
+  document.getElementById("solidworks_link").value =
+    machine.solidworks_link || "";
+
+  // Change le bouton submit
+  const form = document.getElementById("machine-form");
+  const submitBtn = form.querySelector('button[type="submit"]');
+  submitBtn.textContent = "💾 Mettre à jour";
+  submitBtn.style.background = "#f59e0b";
+
+  // Ajoute un bouton annuler
+  let cancelBtn = document.getElementById("cancel-edit-btn");
+  if (!cancelBtn) {
+    cancelBtn = document.createElement("button");
+    cancelBtn.id = "cancel-edit-btn";
+    cancelBtn.type = "button";
+    cancelBtn.className = "btn-secondary";
+    cancelBtn.textContent = "❌ Annuler";
+    cancelBtn.onclick = cancelEdit;
+    submitBtn.parentNode.insertBefore(cancelBtn, submitBtn.nextSibling);
+  }
+
+  // Scroll vers le formulaire
+  form.scrollIntoView({ behavior: "smooth" });
+
+  // Change le gestionnaire du formulaire
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    await updateMachine(id);
+  };
+
+  showNotification("✏️ Mode modification activé", "info");
+}
+
+async function updateMachine(id) {
+  const data = {
+    nom: document.getElementById("nom").value,
+    reference: document.getElementById("reference").value,
+    quantite: parseInt(document.getElementById("quantite").value),
+    localisation: document.getElementById("localisation").value || "",
+    prix: parseFloat(document.getElementById("prix").value || 0),
+    seuil_alert: parseInt(document.getElementById("seuil_alert").value || 5),
+    solidworks_link: document.getElementById("solidworks_link").value || "",
+  };
+
+  try {
+    const response = await fetch(`${API}/machines/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+
+    if (response.ok) {
+      showNotification("✅ Machine mise à jour", "success");
+      cancelEdit();
+      await loadMachines();
+    } else {
+      const error = await response.json();
+      showNotification(`❌ ${error.error || "Erreur"}`, "error");
+    }
+  } catch (error) {
+    showNotification("❌ Erreur connexion", "error");
+  }
+}
+
+function cancelEdit() {
+  const form = document.getElementById("machine-form");
+  form.reset();
+
+  const submitBtn = form.querySelector('button[type="submit"]');
+  submitBtn.textContent = "Ajouter la machine";
+  submitBtn.style.background = "";
+
+  const cancelBtn = document.getElementById("cancel-edit-btn");
+  if (cancelBtn) cancelBtn.remove();
+
+  // Réinitialise le gestionnaire du formulaire
+  form.onsubmit = null;
+
+  showNotification("Modification annulée", "info");
+}
+
+// ============ DÉTAILS MACHINE ============
 async function openMachineDetails(id) {
   const machine = allMachines.find((m) => m.id === id);
   if (!machine) return;
@@ -188,12 +329,36 @@ async function openMachineDetails(id) {
           </div>
         </div>
 
+        <!-- Lien SolidWorks -->
+        ${
+          machine.solidworks_link
+            ? `
+          <div style="margin-bottom:25px;padding:15px;background:#dbeafe;border-left:4px solid #0ea5e9;border-radius:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+              <div style="flex:1;min-width:200px;">
+                <h3 style="margin:0 0 5px 0;color:#0369a1;">📐 Assemblage SolidWorks</h3>
+                <p style="margin:0;color:#64748b;font-size:0.85em;font-family:monospace;word-break:break-all;">${escapeHtml(
+                  machine.solidworks_link
+                )}</p>
+              </div>
+              <button class="btn-primary" onclick="openSolidWorksFile('${machine.solidworks_link.replace(
+                /\\/g,
+                "\\\\"
+              )}')">
+                🔧 Ouvrir
+              </button>
+            </div>
+          </div>
+        `
+            : ""
+        }
+
         <!-- Visualisation 3D -->
         ${
           machine.glb_path
             ? `
           <div style="margin-bottom:25px;">
-            <h3 style="margin-bottom:10px;">🎨 Modèle 3D</h3>
+            <h3 style="margin-bottom:10px;">🎨 Aperçu 3D</h3>
             <div style="background:#000;border-radius:8px;overflow:hidden;aspect-ratio:16/9;">
               <model-viewer 
                 src="${machine.glb_path}" 
@@ -209,125 +374,63 @@ async function openMachineDetails(id) {
 
         <!-- Maintenances -->
         <div style="margin-bottom:25px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <h3>🔧 Maintenances</h3>
-            ${
-              perms.canEdit
-                ? `<button class="btn-primary" onclick="openAddMaintenanceModal(${id})">➕ Ajouter</button>`
-                : ""
-            }
-          </div>
-          <div id="maintenances-list">
-            ${
-              maintenances.length === 0
-                ? '<p style="color:#999;text-align:center;padding:20px;">Aucune maintenance planifiée</p>'
-                : maintenances
-                    .map(
-                      (m) => `
-                <div class="maintenance-card" style="background:#f8f9fa;padding:15px;border-radius:8px;margin-bottom:10px;border-left:4px solid ${
-                  m.status === "completed"
-                    ? "#10b981"
-                    : m.status === "in_progress"
-                    ? "#f59e0b"
-                    : "#667eea"
-                };">
-                  <div style="display:flex;justify-content:space-between;align-items:start;">
-                    <div>
-                      <strong>${escapeHtml(m.type)}</strong>
-                      <p style="margin:5px 0;color:#666;">${escapeHtml(
-                        m.description || "Pas de description"
-                      )}</p>
-                      <small style="color:#999;">
-                        📅 Programmée: ${new Date(
-                          m.date_programmee
-                        ).toLocaleDateString("fr-FR")}
-                        ${
-                          m.date_realisee
-                            ? ` | ✓ Réalisée: ${new Date(
-                                m.date_realisee
-                              ).toLocaleDateString("fr-FR")}`
-                            : ""
-                        }
-                      </small>
-                    </div>
-                    <div>
-                      <span style="padding:4px 12px;border-radius:12px;font-size:0.85em;background:${
-                        m.status === "completed"
-                          ? "#10b981"
-                          : m.status === "in_progress"
-                          ? "#f59e0b"
-                          : "#667eea"
-                      };color:white;">
-                        ${
-                          m.status === "completed"
-                            ? "✓ Terminée"
-                            : m.status === "in_progress"
-                            ? "⏳ En cours"
-                            : "📋 Planifiée"
-                        }
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              `
-                    )
-                    .join("")
-            }
-          </div>
+          <h3>🔧 Maintenances</h3>
+          ${
+            maintenances.length > 0
+              ? maintenances
+                  .map(
+                    (m) => `
+            <div style="padding:10px;background:#f9fafb;border-left:3px solid ${
+              m.status === "completed" ? "#10b981" : "#f59e0b"
+            };margin-bottom:10px;border-radius:4px;">
+              <div style="display:flex;justify-content:space-between;">
+                <strong>${m.type}</strong>
+                <span style="color:#666;font-size:0.9em;">${new Date(
+                  m.date_programmee
+                ).toLocaleDateString("fr-FR")}</span>
+              </div>
+              <p style="margin:5px 0;color:#666;">${m.description || ""}</p>
+              <span style="background:${
+                m.status === "completed" ? "#10b981" : "#f59e0b"
+              };color:white;padding:2px 8px;border-radius:4px;font-size:0.85em;">${
+                      m.status
+                    }</span>
+            </div>
+          `
+                  )
+                  .join("")
+              : '<p style="color:#666;">Aucune maintenance</p>'
+          }
         </div>
 
         <!-- Fichiers -->
         <div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <h3>📁 Documents & Plans</h3>
-            ${
-              perms.canEdit
-                ? `<button class="btn-primary" onclick="openUploadFileModal(${id})">➕ Ajouter fichier</button>`
-                : ""
-            }
-          </div>
-          <div id="files-list">
-            ${
-              files.length === 0
-                ? '<p style="color:#999;text-align:center;padding:20px;">Aucun fichier</p>'
-                : files
-                    .map(
-                      (f) => `
-                <div class="file-item" style="background:#f8f9fa;padding:12px 15px;border-radius:8px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
-                  <div style="display:flex;align-items:center;gap:10px;">
-                    <span style="font-size:1.5em;">📄</span>
-                    <div>
-                      <strong>${escapeHtml(f.filename)}</strong>
-                      <br><small style="color:#999;">Ajouté le ${new Date(
-                        f.uploaded_at
-                      ).toLocaleDateString("fr-FR")}</small>
-                    </div>
-                  </div>
-                  <div style="display:flex;gap:8px;">
-                    <a href="${
-                      f.path
-                    }" target="_blank" class="btn-small">👁️ Voir</a>
-                    ${
-                      perms.canDelete
-                        ? `<button class="btn-small btn-delete" onclick="deleteFile(${f.id}, ${id})">🗑️</button>`
-                        : ""
-                    }
-                  </div>
-                </div>
-              `
-                    )
-                    .join("")
-            }
-          </div>
+          <h3>📄 Fichiers</h3>
+          ${
+            files.length > 0
+              ? files
+                  .map(
+                    (f) => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:#f9fafb;margin-bottom:10px;border-radius:4px;">
+              <div>
+                <strong>${escapeHtml(f.filename)}</strong>
+                <p style="margin:5px 0;color:#666;font-size:0.85em;">${new Date(
+                  f.uploaded_at
+                ).toLocaleDateString("fr-FR")}</p>
+              </div>
+              <a href="${
+                f.path
+              }" target="_blank" class="btn-small btn-view">📥 Voir</a>
+            </div>
+          `
+                  )
+                  .join("")
+              : '<p style="color:#666;">Aucun fichier</p>'
+          }
         </div>
       </div>
 
       <div class="modal-actions">
-        ${
-          perms.canEdit
-            ? `<button class="btn-primary" onclick="openEditMachineModal(${id})">✏️ Modifier</button>`
-            : ""
-        }
         <button class="btn-secondary" onclick="document.getElementById('machine-modal').style.display='none'">Fermer</button>
       </div>
     </div>
@@ -335,161 +438,190 @@ async function openMachineDetails(id) {
 
   modal.style.display = "flex";
   modal.onclick = (e) => {
-    if (e.target === modal) modal.style.display = "none";
+    if (e.target === modal) {
+      modal.style.display = "none";
+    }
   };
 }
 
-// Ajouter une maintenance
-function openAddMaintenanceModal(machineId) {
-  let modal = document.getElementById("add-maintenance-modal");
-  if (!modal) {
-    modal = document.createElement("div");
-    modal.id = "add-maintenance-modal";
-    modal.className = "modal";
-    document.body.appendChild(modal);
-  }
+// Fonction pour ouvrir le fichier SolidWorks
+function openSolidWorksFile(filePath) {
+  const cleanPath = filePath.trim();
 
+  const modal = document.createElement("div");
+  modal.className = "modal";
+  modal.style.display = "flex";
   modal.innerHTML = `
-    <div class="modal-content" style="max-width:500px;">
+    <div class="modal-content" style="max-width:650px;">
       <div class="modal-header">
-        <h2>➕ Ajouter une maintenance</h2>
-        <button class="modal-close" onclick="document.getElementById('add-maintenance-modal').style.display='none'">×</button>
+        <h2>📐 Ouvrir avec SolidWorks</h2>
+        <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
       </div>
-      <form onsubmit="submitMaintenance(event, ${machineId})">
-        <div class="form-group">
-          <label>Type de maintenance *</label>
-          <input type="text" id="maintenance-type" placeholder="Ex: Révision complète" required />
+      <div class="modal-body">
+        <div style="background:#f3f4f6;padding:12px;border-radius:8px;margin-bottom:20px;">
+          <strong>📂 Fichier:</strong>
+          <p style="margin:5px 0;font-family:monospace;font-size:0.85em;word-break:break-all;">${escapeHtml(
+            cleanPath
+          )}</p>
         </div>
-        <div class="form-group">
-          <label>Description</label>
-          <textarea id="maintenance-description" placeholder="Détails..." rows="3"></textarea>
+
+        <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
+          <button class="btn-primary" style="padding:15px;font-size:1em;" onclick="openViaPowerShell('${cleanPath.replace(
+            /\\/g,
+            "\\\\"
+          )}'); this.closest('.modal').remove()">
+            🚀 Méthode 1: Ouverture automatique (Serveur)
+          </button>
+          
+          <button class="btn-primary" style="padding:15px;font-size:1em;" onclick="downloadBatchScript('${cleanPath.replace(
+            /\\/g,
+            "\\\\"
+          )}'); this.closest('.modal').remove()">
+            💾 Méthode 2: Télécharger script .bat
+          </button>
+          
+          <button class="btn-primary" style="padding:15px;font-size:1em;" onclick="copyPathAndShowInstructions('${cleanPath.replace(
+            /\\/g,
+            "\\\\"
+          )}'); this.closest('.modal').remove()">
+            📋 Méthode 3: Copier le chemin (Manuel)
+          </button>
         </div>
-        <div class="form-group">
-          <label>Date programmée *</label>
-          <input type="date" id="maintenance-date" required />
+
+        <div style="padding:15px;background:#dbeafe;border-left:4px solid #3b82f6;border-radius:6px;">
+          <strong style="display:block;margin-bottom:8px;">💡 Instructions:</strong>
+          <ul style="margin:0;padding-left:20px;font-size:0.9em;line-height:1.6;">
+            <li><strong>Méthode 1:</strong> Ouvre automatiquement le fichier (recommandé)</li>
+            <li><strong>Méthode 2:</strong> Télécharge un script, double-cliquez dessus</li>
+            <li><strong>Méthode 3:</strong> Copie le chemin et collez dans l'explorateur (Win+E)</li>
+          </ul>
         </div>
-        <div class="form-group">
-          <label>Priorité</label>
-          <select id="maintenance-priority">
-            <option value="low">🟢 Faible</option>
-            <option value="medium" selected>🟡 Moyenne</option>
-            <option value="high">🔴 Haute</option>
-          </select>
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn-secondary" onclick="document.getElementById('add-maintenance-modal').style.display='none'">Annuler</button>
-          <button type="submit" class="btn-primary">Ajouter</button>
-        </div>
-      </form>
+      </div>
     </div>
   `;
 
-  modal.style.display = "flex";
+  document.body.appendChild(modal);
+  modal.onclick = (e) => {
+    if (e.target === modal) modal.remove();
+  };
 }
 
-// Soumettre maintenance
-async function submitMaintenance(e, machineId) {
-  e.preventDefault();
-
-  const data = {
-    type: document.getElementById("maintenance-type").value,
-    description: document.getElementById("maintenance-description").value,
-    date_programmee: document.getElementById("maintenance-date").value,
-    priority: document.getElementById("maintenance-priority").value,
-  };
-
+async function openViaPowerShell(filePath) {
   try {
-    const response = await fetch(`${API}/machines/${machineId}/maintenances`, {
+    showNotification("🔄 Ouverture du fichier...", "info");
+
+    const response = await fetch(`${API}/open-file`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify(data),
+      body: JSON.stringify({ filePath }),
     });
 
     if (response.ok) {
-      showNotification("✅ Maintenance ajoutée", "success");
-      document.getElementById("add-maintenance-modal").style.display = "none";
-      openMachineDetails(machineId); // Recharge les détails
+      showNotification("✅ Fichier ouvert avec succès!", "success");
+    } else {
+      const error = await response.json();
+      console.error("Erreur:", error);
+      showNotification(`❌ ${error.error || "Erreur ouverture"}`, "error");
+
+      // Propose la méthode alternative
+      setTimeout(() => {
+        if (
+          confirm(
+            "❌ Échec ouverture automatique.\n\nVoulez-vous télécharger le script .bat ?"
+          )
+        ) {
+          downloadBatchScript(filePath);
+        }
+      }, 1000);
     }
   } catch (error) {
-    showNotification("❌ Erreur ajout maintenance", "error");
+    console.error("Erreur réseau:", error);
+    showNotification("❌ Erreur de connexion", "error");
   }
 }
 
-// Upload fichier
-function openUploadFileModal(machineId) {
-  let modal = document.getElementById("upload-file-modal");
-  if (!modal) {
-    modal = document.createElement("div");
-    modal.id = "upload-file-modal";
-    modal.className = "modal";
-    document.body.appendChild(modal);
-  }
-
-  modal.innerHTML = `
-    <div class="modal-content" style="max-width:500px;">
-      <div class="modal-header">
-        <h2>📁 Ajouter un fichier</h2>
-        <button class="modal-close" onclick="document.getElementById('upload-file-modal').style.display='none'">×</button>
-      </div>
-      <form onsubmit="submitFile(event, ${machineId})">
-        <div class="form-group">
-          <label>Fichier (PDF, DOCX, XLSX, Images) *</label>
-          <input type="file" id="file-upload" accept=".pdf,.docx,.xlsx,.png,.jpg,.jpeg" required />
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn-secondary" onclick="document.getElementById('upload-file-modal').style.display='none'">Annuler</button>
-          <button type="submit" class="btn-primary">Télécharger</button>
-        </div>
-      </form>
-    </div>
-  `;
-
-  modal.style.display = "flex";
-}
-
-// Soumettre fichier
-async function submitFile(e, machineId) {
-  e.preventDefault();
-
-  const formData = new FormData();
-  const fileInput = document.getElementById("file-upload");
-  formData.append("file", fileInput.files[0]);
-
+async function downloadBatchScript(filePath) {
   try {
-    const response = await fetch(`${API}/machines/${machineId}/files`, {
+    showNotification("💾 Création du script...", "info");
+
+    const response = await fetch(`${API}/create-open-script`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: formData,
+      body: JSON.stringify({ filePath }),
     });
 
     if (response.ok) {
-      showNotification("✅ Fichier ajouté", "success");
-      document.getElementById("upload-file-modal").style.display = "none";
-      openMachineDetails(machineId);
+      const data = await response.json();
+
+      // Télécharge le fichier .bat
+      const link = document.createElement("a");
+      link.href = data.scriptPath;
+      link.download = "ouvrir-solidworks.bat";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      showNotification(
+        "✅ Script téléchargé! Double-cliquez dessus pour ouvrir le fichier",
+        "success",
+        8000
+      );
+    } else {
+      showNotification("❌ Erreur création script", "error");
     }
   } catch (error) {
-    showNotification("❌ Erreur upload fichier", "error");
+    console.error("Erreur:", error);
+    showNotification("❌ Erreur serveur", "error");
   }
 }
 
-// Supprimer fichier
-async function deleteFile(fileId, machineId) {
-  if (!confirm("Supprimer ce fichier ?")) return;
+function copyPathAndShowInstructions(filePath) {
+  copyToClipboard(filePath);
+  showNotification(
+    "✅ Chemin copié!\n\n1. Ouvrez l'explorateur (Win+E)\n2. Collez dans la barre d'adresse (Ctrl+V)\n3. Appuyez sur Entrée",
+    "success",
+    10000
+  );
+}
+
+function copyToClipboard(text) {
+  // Méthode moderne
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        console.log("✅ Copié avec succès:", text);
+      })
+      .catch((err) => {
+        console.error("Erreur clipboard moderne:", err);
+        fallbackCopy(text);
+      });
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text) {
+  // Fallback pour anciens navigateurs
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.style.position = "fixed";
+  textarea.style.top = "-9999px";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
 
   try {
-    const response = await fetch(`${API}/machines/files/${fileId}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
-
-    if (response.ok) {
-      showNotification("✅ Fichier supprimé", "success");
-      openMachineDetails(machineId);
-    }
-  } catch (error) {
-    showNotification("❌ Erreur suppression", "error");
+    document.execCommand("copy");
+    console.log("✅ Copié avec fallback:", text);
+  } catch (err) {
+    console.error("Erreur copie fallback:", err);
   }
+
+  document.body.removeChild(textarea);
 }
 
 // Initialisation
@@ -498,49 +630,231 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   await loadMachines();
 
+  // Ouvre la console (F12) et tape:
+  fetch('/api/machines', {credentials: 'include'}).then(r => r.json()).then(data => {
+    console.log('Machines dans la BD:', data);
+    console.log('Nombre de machines:', data.length);
+  });
+
+  // ============ DRAG & DROP FICHIER GLB ============
+  const glbFileInput = document.getElementById("glb_file");
+  const solidworksInput = document.getElementById("solidworks_link");
+
+  if (glbFileInput) {
+    // Crée une zone de drop visuelle
+    const dropZone = document.createElement("div");
+    dropZone.className = "drop-zone";
+    dropZone.innerHTML = `
+      <div class="drop-zone-content">
+        <div style="font-size:3em;margin-bottom:10px;">📦</div>
+        <p style="font-weight:bold;margin-bottom:5px;">Glissez votre fichier GLB ici</p>
+        <p style="color:#666;font-size:0.9em;">ou cliquez pour parcourir</p>
+      </div>
+    `;
+
+    // Remplace l'input file par la drop zone
+    glbFileInput.style.display = "none";
+    glbFileInput.parentElement.appendChild(dropZone);
+
+    // Click pour ouvrir le sélecteur
+    dropZone.addEventListener("click", () => glbFileInput.click());
+
+    // Drag & Drop events
+    ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+      dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    ["dragenter", "dragover"].forEach((eventName) => {
+      dropZone.addEventListener(eventName, () => {
+        dropZone.classList.add("drop-zone-active");
+      });
+    });
+
+    ["dragleave", "drop"].forEach((eventName) => {
+      dropZone.addEventListener(eventName, () => {
+        dropZone.classList.remove("drop-zone-active");
+      });
+    });
+
+    dropZone.addEventListener("drop", (e) => {
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        const file = files[0];
+
+        // Vérifie l'extension
+        if (
+          file.name.toLowerCase().endsWith(".glb") ||
+          file.name.toLowerCase().endsWith(".gltf")
+        ) {
+          glbFileInput.files = files;
+          dropZone.innerHTML = `
+            <div class="drop-zone-content" style="background:#dcfce7;">
+              <div style="font-size:2em;margin-bottom:10px;">✅</div>
+              <p style="font-weight:bold;color:#059669;">${file.name}</p>
+              <p style="color:#666;font-size:0.85em;">${(
+                file.size /
+                1024 /
+                1024
+              ).toFixed(2)} MB</p>
+            </div>
+          `;
+          showNotification(`✅ Fichier ${file.name} chargé`, "success");
+        } else {
+          showNotification(
+            "❌ Seuls les fichiers GLB/GLTF sont acceptés",
+            "error"
+          );
+        }
+      }
+    });
+
+    // Change l'affichage quand un fichier est sélectionné
+    glbFileInput.addEventListener("change", (e) => {
+      if (e.target.files.length > 0) {
+        const file = e.target.files[0];
+        dropZone.innerHTML = `
+          <div class="drop-zone-content" style="background:#dcfce7;">
+            <div style="font-size:2em;margin-bottom:10px;">✅</div>
+            <p style="font-weight:bold;color:#059669;">${file.name}</p>
+            <p style="color:#666;font-size:0.85em;">${(
+              file.size /
+              1024 /
+              1024
+            ).toFixed(2)} MB</p>
+          </div>
+        `;
+      }
+    });
+  }
+
+  // ============ DRAG & DROP POUR SOLIDWORKS (FICHIER OU DOSSIER) ============
+  if (solidworksInput) {
+    const swDropZone = document.createElement("div");
+    swDropZone.className = "drop-zone";
+    swDropZone.style.minHeight = "80px";
+    swDropZone.innerHTML = `
+      <div class="drop-zone-content">
+        <div style="font-size:2em;margin-bottom:10px;">📐</div>
+        <p style="font-weight:bold;margin-bottom:5px;">Glissez le fichier SolidWorks ici</p>
+        <p style="color:#666;font-size:0.9em;">Le chemin sera automatiquement rempli</p>
+      </div>
+    `;
+
+    solidworksInput.parentElement.appendChild(swDropZone);
+
+    ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+      swDropZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    ["dragenter", "dragover"].forEach((eventName) => {
+      swDropZone.addEventListener(eventName, () => {
+        swDropZone.classList.add("drop-zone-active");
+      });
+    });
+
+    ["dragleave", "drop"].forEach((eventName) => {
+      swDropZone.addEventListener(eventName, () => {
+        swDropZone.classList.remove("drop-zone-active");
+      });
+    });
+
+    swDropZone.addEventListener("drop", (e) => {
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        const file = files[0];
+
+        // Récupère le chemin complet (ne fonctionne que dans certains contextes)
+        const filePath = file.path || file.name;
+
+        solidworksInput.value = filePath;
+        swDropZone.innerHTML = `
+          <div class="drop-zone-content" style="background:#dbeafe;">
+            <div style="font-size:2em;margin-bottom:10px;">✅</div>
+            <p style="font-weight:bold;color:#0369a1;">${file.name}</p>
+            <p style="color:#666;font-size:0.85em;font-family:monospace;word-break:break-all;">${filePath}</p>
+          </div>
+        `;
+        showNotification(`✅ Chemin SolidWorks défini`, "success");
+      }
+    });
+  }
+
   // Formulaire d'ajout
   const machineForm = document.getElementById("machine-form");
   if (machineForm) {
     machineForm.addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      const formData = new FormData();
-      formData.append("nom", document.getElementById("nom").value);
-      formData.append("reference", document.getElementById("reference").value);
-      formData.append("quantite", document.getElementById("quantite").value);
-      formData.append(
-        "localisation",
-        document.getElementById("localisation").value || ""
-      );
-      formData.append("prix", document.getElementById("prix").value || "0");
-      formData.append(
-        "seuil_alert",
-        document.getElementById("seuil_alert").value || "5"
-      );
+      // Récupère les valeurs
+      const nom = document.getElementById("nom")?.value;
+      const reference = document.getElementById("reference")?.value;
+      const quantite = document.getElementById("quantite")?.value;
+      const localisation = document.getElementById("localisation")?.value || "";
+      const prix = document.getElementById("prix")?.value || "0";
+      const seuil_alert = document.getElementById("seuil_alert")?.value || "5";
+      const solidworks_link =
+        document.getElementById("solidworks_link")?.value || "";
 
-      const glbFile = document.getElementById("glb_file").files[0];
-      if (glbFile) {
-        formData.append("glb_file", glbFile);
+      // Vérifie les champs obligatoires
+      if (!nom || !reference || !quantite) {
+        showNotification(
+          "❌ Veuillez remplir tous les champs obligatoires",
+          "error"
+        );
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("nom", nom);
+      formData.append("reference", reference);
+      formData.append("quantite", quantite);
+      formData.append("localisation", localisation);
+      formData.append("prix", prix);
+      formData.append("seuil_alert", seuil_alert);
+      formData.append("solidworks_link", solidworks_link);
+
+      const glbFileInput = document.getElementById("glb_file");
+      if (glbFileInput && glbFileInput.files[0]) {
+        formData.append("glb_file", glbFileInput.files[0]);
       }
 
       try {
+        console.log("Envoi de la machine...");
         const response = await fetch(`${API}/machines`, {
           method: "POST",
           credentials: "include",
           body: formData,
         });
 
+        console.log("Réponse reçue:", response.status);
+
         if (response.ok) {
-          showNotification("✅ Machine ajoutée", "success");
-          machineForm.reset(); // Vide le formulaire
+          const result = await response.json();
+          console.log("Succès:", result);
+          showNotification("✅ Machine ajoutée avec succès", "success");
+          machineForm.reset();
           await loadMachines();
         } else {
           const error = await response.json();
-          showNotification(`❌ ${error.error || "Erreur ajout"}`, "error");
+          console.error("Erreur serveur:", error);
+          showNotification(
+            `❌ ${error.error || "Erreur lors de l'ajout"}`,
+            "error"
+          );
         }
       } catch (error) {
-        console.error("Erreur:", error);
-        showNotification("Erreur connexion", "error");
+        console.error("Erreur réseau:", error);
+        showNotification("❌ Erreur de connexion au serveur", "error");
       }
     });
   }

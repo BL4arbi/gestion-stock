@@ -8,6 +8,7 @@ const fs = require("fs");
 const multer = require("multer");
 const db = require("./database");
 const os = require("os");
+const { exec } = require("child_process");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -316,13 +317,28 @@ app.post(
   checkPermission("admin"),
   upload.single("glb_file"),
   (req, res) => {
-    const { nom, reference, quantite, localisation, prix, seuil_alert } =
-      req.body;
-    const glb_path = req.file ? `/assets/uploads/${req.file.filename}` : null; // ← CHANGÉ ICI
+    console.log("POST /api/machines - Body:", req.body);
+    console.log("POST /api/machines - File:", req.file);
+
+    const {
+      nom,
+      reference,
+      quantite,
+      localisation,
+      prix,
+      seuil_alert,
+      solidworks_link,
+    } = req.body;
+    const glb_path = req.file ? `/assets/uploads/${req.file.filename}` : null;
+
+    // Validation
+    if (!nom || !reference || !quantite) {
+      return res.status(400).json({ error: "Champs obligatoires manquants" });
+    }
 
     db.run(
-      `INSERT INTO machines (nom, reference, quantite, localisation, prix, seuil_alert, glb_path) 
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO machines (nom, reference, quantite, localisation, prix, seuil_alert, glb_path, solidworks_link) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         nom,
         reference,
@@ -331,12 +347,14 @@ app.post(
         prix || 0,
         seuil_alert || 5,
         glb_path,
+        solidworks_link || null,
       ],
       function (err) {
         if (err) {
           console.error("Erreur POST machine:", err);
           return res.status(500).json({ error: err.message });
         }
+        console.log("Machine ajoutée avec ID:", this.lastID);
         res.json({ id: this.lastID, message: "Machine ajoutée" });
       }
     );
@@ -349,15 +367,31 @@ app.put(
   requireAuth,
   checkPermission("admin"),
   (req, res) => {
-    const { nom, reference, quantite, localisation, prix, seuil_alert } =
-      req.body;
+    const {
+      nom,
+      reference,
+      quantite,
+      localisation,
+      prix,
+      seuil_alert,
+      solidworks_link,
+    } = req.body;
     const { id } = req.params;
 
     db.run(
       `UPDATE machines 
-     SET nom=?, reference=?, quantite=?, localisation=?, prix=?, seuil_alert=? 
-     WHERE id=?`,
-      [nom, reference, quantite, localisation, prix, seuil_alert, id],
+       SET nom=?, reference=?, quantite=?, localisation=?, prix=?, seuil_alert=?, solidworks_link=? 
+       WHERE id=?`,
+      [
+        nom,
+        reference,
+        quantite,
+        localisation,
+        prix,
+        seuil_alert,
+        solidworks_link,
+        id,
+      ],
       (err) => {
         if (err) {
           console.error("Erreur PUT machine:", err);
@@ -377,34 +411,87 @@ app.delete(
   (req, res) => {
     const { id } = req.params;
 
+    // Récupère d'abord les infos de la machine
     db.get(
       "SELECT glb_path FROM machines WHERE id = ?",
       [id],
       (err, machine) => {
         if (err) {
-          console.error("Erreur DELETE machine:", err);
+          console.error("Erreur récupération machine:", err);
           return res.status(500).json({ error: err.message });
         }
 
+        // Supprime le fichier GLB si présent
         if (machine && machine.glb_path) {
           const filePath = path.join(
             __dirname,
             "..",
             "public",
             machine.glb_path
-          ); // ← CHANGÉ ICI
+          );
           if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
+            try {
+              fs.unlinkSync(filePath);
+              console.log("✓ Fichier GLB supprimé:", filePath);
+            } catch (err) {
+              console.error("Erreur suppression fichier:", err);
+            }
           }
         }
 
-        db.run("DELETE FROM machines WHERE id = ?", [id], (err) => {
-          if (err) {
-            console.error("Erreur DELETE machine:", err);
-            return res.status(500).json({ error: err.message });
+        // Supprime tous les fichiers associés
+        db.all(
+          "SELECT path FROM machine_files WHERE machine_id = ?",
+          [id],
+          (err, files) => {
+            if (files && files.length > 0) {
+              files.forEach((file) => {
+                const filePath = path.join(
+                  __dirname,
+                  "..",
+                  "public",
+                  file.path
+                );
+                if (fs.existsSync(filePath)) {
+                  try {
+                    fs.unlinkSync(filePath);
+                    console.log("✓ Fichier supprimé:", filePath);
+                  } catch (err) {
+                    console.error("Erreur suppression fichier:", err);
+                  }
+                }
+              });
+            }
+
+            // Supprime les maintenances associées
+            db.run(
+              "DELETE FROM maintenances WHERE machine_id = ?",
+              [id],
+              (err) => {
+                if (err) console.error("Erreur suppression maintenances:", err);
+              }
+            );
+
+            // Supprime les fichiers associés de la BD
+            db.run(
+              "DELETE FROM machine_files WHERE machine_id = ?",
+              [id],
+              (err) => {
+                if (err) console.error("Erreur suppression fichiers BD:", err);
+              }
+            );
+
+            // Supprime enfin la machine
+            db.run("DELETE FROM machines WHERE id = ?", [id], (err) => {
+              if (err) {
+                console.error("Erreur DELETE machine:", err);
+                return res.status(500).json({ error: err.message });
+              }
+              console.log("✓ Machine supprimée avec succès:", id);
+              res.json({ message: "Machine supprimée avec succès" });
+            });
           }
-          res.json({ message: "Machine supprimée" });
-        });
+        );
       }
     );
   }
@@ -543,6 +630,100 @@ app.delete("/api/machines/files/:fileId", requireAuth, (req, res) => {
       }
     );
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
+// ========== ROUTES COMMANDES =================
+// ============================================
+
+app.post("/api/open-file", requireAuth, (req, res) => {
+  const { filePath } = req.body;
+
+  if (!filePath) {
+    return res.status(400).json({ error: "Chemin manquant" });
+  }
+
+  console.log("Tentative d'ouverture du fichier:", filePath);
+
+  // Utilise une commande PowerShell qui fonctionne mieux avec les chemins réseau
+  const command = `powershell.exe -Command "Start-Process '${filePath}'"`;
+
+  exec(command, (error, stdout, stderr) => {
+    if (error) {
+      console.error("Erreur ouverture fichier:", error);
+      console.error("stderr:", stderr);
+
+      // Essaye une méthode alternative avec cmd
+      const cmdCommand = `cmd /c start "" "${filePath}"`;
+      exec(cmdCommand, (error2, stdout2, stderr2) => {
+        if (error2) {
+          console.error("Erreur méthode alternative:", error2);
+          return res.status(500).json({
+            error: "Impossible d'ouvrir le fichier",
+            details: error2.message,
+          });
+        }
+        console.log("✓ Fichier ouvert avec cmd");
+        res.json({ message: "Fichier ouvert" });
+      });
+    } else {
+      console.log("✓ Fichier ouvert avec PowerShell");
+      res.json({ message: "Fichier ouvert" });
+    }
+  });
+});
+
+app.post("/api/create-open-script", requireAuth, (req, res) => {
+  const { filePath } = req.body;
+
+  if (!filePath) {
+    return res.status(400).json({ error: "Chemin manquant" });
+  }
+
+  // Crée un fichier .bat avec plusieurs méthodes de fallback
+  const scriptContent = `@echo off
+echo Tentative d'ouverture du fichier...
+echo Chemin: ${filePath}
+echo.
+
+REM Méthode 1: Start direct
+start "" "${filePath}"
+
+REM Attendre 2 secondes
+timeout /t 2 /nobreak >nul
+
+REM Si échec, méthode 2: Explorer
+if errorlevel 1 (
+    echo Méthode alternative...
+    explorer.exe "${filePath}"
+)
+
+echo.
+echo Appuyez sur une touche pour fermer...
+pause >nul
+`;
+
+  const timestamp = Date.now();
+  const scriptPath = path.join(
+    __dirname,
+    "..",
+    "public",
+    "assets",
+    `open-solidworks-${timestamp}.bat`
+  );
+
+  try {
+    fs.writeFileSync(scriptPath, scriptContent);
+    console.log("✓ Script créé:", scriptPath);
+
+    res.json({
+      scriptPath: `/assets/open-solidworks-${timestamp}.bat`,
+      message: "Script créé",
+    });
+  } catch (error) {
+    console.error("Erreur création script:", error);
     res.status(500).json({ error: error.message });
   }
 });

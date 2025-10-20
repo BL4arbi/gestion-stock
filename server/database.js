@@ -118,6 +118,15 @@ db.serialize(() => {
       FOREIGN KEY (machine_id) REFERENCES machines(id) ON DELETE CASCADE
     )
   `);
+
+  // Ajoute cette migration après la création de la table machines:
+  db.run(`ALTER TABLE machines ADD COLUMN solidworks_link TEXT`, (err) => {
+    if (err && !err.message.includes("duplicate column")) {
+      console.error("Erreur ajout colonne solidworks_link:", err);
+    } else {
+      console.log("✓ Colonne solidworks_link ajoutée/vérifiée");
+    }
+  });
 });
 
 module.exports = db;
