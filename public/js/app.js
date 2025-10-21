@@ -1,4 +1,4 @@
-// Configuration de l'API
+// app.js - Authentification et fonctions globales
 const API_URL = window.location.origin + "/api";
 
 let editingProductId = null;
@@ -6,12 +6,12 @@ let currentUser = null;
 let allProducts = [];
 let authChecked = false;
 
-// userPermissions est maintenant dans window.userPermissions (défini dans permissions.js)
-
-// Vérifier l'authentification au chargement
+// ============================================
+// AUTHENTIFICATION
+// ============================================
 async function checkAuth() {
   try {
-    const response = await fetch(`${window.location.origin}/api/auth/check`, {
+    const response = await fetch(`${API_URL}/auth/check`, {
       credentials: "include",
     });
 
@@ -19,11 +19,10 @@ async function checkAuth() {
       const data = await response.json();
       const userElement = document.getElementById("current-user");
       if (userElement) {
-        userElement.textContent = data.username;
+        userElement.textContent = data.user.username;
       }
       authChecked = true;
 
-      // Charge les permissions après l'auth
       if (typeof loadPermissions === "function") {
         await loadPermissions();
       }
@@ -34,7 +33,7 @@ async function checkAuth() {
       return false;
     }
   } catch (error) {
-    console.error("Erreur:", error);
+    console.error("Erreur auth:", error);
     window.location.href = "/login.html";
     return false;
   }
@@ -43,7 +42,7 @@ async function checkAuth() {
 // Déconnexion
 async function logout() {
   try {
-    const response = await fetch(`${window.location.origin}/api/auth/logout`, {
+    const response = await fetch(`${API_URL}/auth/logout`, {
       method: "POST",
       credentials: "include",
     });
@@ -57,24 +56,46 @@ async function logout() {
   }
 }
 
-// Afficher les notifications
+// ============================================
+// NOTIFICATIONS
+// ============================================
 function showNotification(message, type = "info", duration = 4000) {
-  const container = document.getElementById("notifications");
+  let container = document.getElementById("notifications");
+
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "notifications";
+    container.style.cssText =
+      "position:fixed;top:20px;right:20px;z-index:10000;";
+    document.body.appendChild(container);
+  }
+
   const notification = document.createElement("div");
   notification.className = `notification ${type}`;
   notification.textContent = message;
+  notification.style.cssText = `
+    padding: 16px 28px;
+    border-radius: 6px;
+    color: white;
+    font-weight: 600;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    ${type === "success" ? "background: #27ae60;" : ""}
+    ${type === "error" ? "background: #e74c3c;" : ""}
+    ${type === "info" ? "background: #003366;" : ""}
+  `;
 
   container.appendChild(notification);
 
   setTimeout(() => {
-    notification.classList.add("fade-out");
-    setTimeout(() => {
-      notification.remove();
-    }, 300);
+    notification.style.opacity = "0";
+    setTimeout(() => notification.remove(), 300);
   }, duration);
 }
 
-// Charger les produits depuis l'API
+// ============================================
+// PRODUITS (pour index.html)
+// ============================================
 async function loadProducts() {
   try {
     const response = await fetch(`${API_URL}/products`, {
@@ -87,95 +108,19 @@ async function loadProducts() {
         window.location.href = "/login.html";
         return;
       }
-      throw new Error("Erreur lors du chargement");
+      throw new Error("Erreur chargement");
     }
 
     allProducts = await response.json();
     renderProducts(allProducts);
   } catch (error) {
-    console.error("Erreur lors du chargement des produits:", error);
-    showNotification("Erreur de connexion au serveur", "error");
-  }
-}
-
-// Recherche produits
-function handleSearch(searchText) {
-  const text = searchText.toLowerCase();
-  const filtered = allProducts.filter(
-    (p) =>
-      p.nom.toLowerCase().includes(text) ||
-      (p.localisation && p.localisation.toLowerCase().includes(text))
-  );
-  renderProducts(filtered);
-}
-
-// Tri produits
-function sortProducts(sortBy) {
-  let sorted = [...allProducts];
-
-  switch (sortBy) {
-    case "nom":
-      sorted.sort((a, b) => a.nom.localeCompare(b.nom));
-      break;
-    case "prix-asc":
-      sorted.sort((a, b) => (a.prix || 0) - (b.prix || 0));
-      break;
-    case "prix-desc":
-      sorted.sort((a, b) => (b.prix || 0) - (a.prix || 0));
-      break;
-    case "quantite":
-      sorted.sort((a, b) => a.quantite - b.quantite);
-      break;
-    case "faible":
-      sorted = sorted.filter((p) => p.quantite <= p.seuil_alert);
-      break;
-  }
-
-  renderProducts(sorted);
-}
-
-// Ajouter un produit
-async function addProduct(e) {
-  e.preventDefault();
-
-  const nom = document.getElementById("nom").value;
-  const quantite = parseInt(document.getElementById("quantite").value);
-  const localisation = document.getElementById("localisation").value;
-  const prix = parseFloat(document.getElementById("prix").value) || 0;
-  const seuil_alert = parseInt(document.getElementById("seuil").value) || 10;
-
-  try {
-    const response = await fetch(`${API_URL}/products`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        nom,
-        quantite,
-        localisation,
-        prix,
-        seuil_alert,
-        category: "general",
-      }),
-    });
-
-    if (response.ok) {
-      showNotification("✅ Produit ajouté avec succès", "success");
-      document.getElementById("product-form").reset();
-      await loadProducts();
-    } else {
-      showNotification("❌ Erreur lors de l'ajout", "error");
-    }
-  } catch (error) {
     console.error("Erreur:", error);
-    showNotification("Erreur de connexion", "error");
+    showNotification("Erreur chargement produits", "error");
   }
 }
 
-// Afficher les produits
 function renderProducts(products) {
   const container = document.getElementById("products-list");
-
   if (!container) return;
 
   if (!products || products.length === 0) {
@@ -183,7 +128,7 @@ function renderProducts(products) {
       <div class="empty-state">
         <div class="empty-state-icon">📦</div>
         <h3>Aucun produit</h3>
-        <p>Commencez par ajouter un produit à votre stock</p>
+        <p>Ajoutez votre premier produit</p>
       </div>
     `;
     return;
@@ -200,7 +145,6 @@ function renderProducts(products) {
   if (totalElem) totalElem.textContent = totalProducts;
   if (lowStockElem) lowStockElem.textContent = lowStockCount;
 
-  // Vérifie que userPermissions est défini
   const perms = window.userPermissions || {
     canAddRemoveStock: false,
     canDelete: false,
@@ -256,7 +200,6 @@ function renderProducts(products) {
     .join("");
 }
 
-// Échapper le HTML pour éviter les injections
 function escapeHtml(text) {
   if (!text) return "";
   const div = document.createElement("div");
@@ -264,7 +207,6 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// Modifier la quantité
 async function updateQuantity(id, newQuantity) {
   if (newQuantity < 0) {
     showNotification("La quantité ne peut pas être négative", "error");
@@ -298,7 +240,6 @@ async function updateQuantity(id, newQuantity) {
   }
 }
 
-// Supprimer un produit
 async function deleteProduct(id) {
   if (!confirm("Êtes-vous sûr de vouloir supprimer ce produit ?")) return;
 
@@ -318,22 +259,93 @@ async function deleteProduct(id) {
   }
 }
 
-// Initialisation
+async function addProduct(e) {
+  e.preventDefault();
+
+  const nom = document.getElementById("nom").value;
+  const quantite = parseInt(document.getElementById("quantite").value);
+  const localisation = document.getElementById("localisation").value;
+  const prix = parseFloat(document.getElementById("prix").value) || 0;
+  const seuil_alert = parseInt(document.getElementById("seuil").value) || 10;
+
+  try {
+    const response = await fetch(`${API_URL}/products`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        nom,
+        quantite,
+        localisation,
+        prix,
+        seuil_alert,
+        category: "general",
+      }),
+    });
+
+    if (response.ok) {
+      showNotification("✅ Produit ajouté", "success");
+      document.getElementById("product-form").reset();
+      await loadProducts();
+    } else {
+      showNotification("❌ Erreur ajout", "error");
+    }
+  } catch (error) {
+    console.error("Erreur:", error);
+    showNotification("Erreur connexion", "error");
+  }
+}
+
+function handleSearch(searchText) {
+  const text = searchText.toLowerCase();
+  const filtered = allProducts.filter(
+    (p) =>
+      p.nom.toLowerCase().includes(text) ||
+      (p.localisation && p.localisation.toLowerCase().includes(text))
+  );
+  renderProducts(filtered);
+}
+
+function sortProducts(sortBy) {
+  let sorted = [...allProducts];
+
+  switch (sortBy) {
+    case "nom":
+      sorted.sort((a, b) => a.nom.localeCompare(b.nom));
+      break;
+    case "prix-asc":
+      sorted.sort((a, b) => (a.prix || 0) - (b.prix || 0));
+      break;
+    case "prix-desc":
+      sorted.sort((a, b) => (b.prix || 0) - (a.prix || 0));
+      break;
+    case "quantite":
+      sorted.sort((a, b) => a.quantite - b.quantite);
+      break;
+    case "faible":
+      sorted = sorted.filter((p) => p.quantite <= p.seuil_alert);
+      break;
+  }
+
+  renderProducts(sorted);
+}
+
+// ============================================
+// INITIALISATION
+// ============================================
 document.addEventListener("DOMContentLoaded", async () => {
   const isAuth = await checkAuth();
   if (!isAuth) return;
 
-  // Charger les produits si on est sur la page d'accueil
+  // Si on est sur index.html
   if (document.getElementById("products-list")) {
     await loadProducts();
 
-    // Événement du formulaire
     const productForm = document.getElementById("product-form");
     if (productForm) {
       productForm.addEventListener("submit", addProduct);
     }
 
-    // Recherche produits
     const searchInput = document.getElementById("search");
     if (searchInput) {
       searchInput.addEventListener("input", (e) =>
@@ -341,7 +353,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
     }
 
-    // Tri produits
     const sortSelect = document.getElementById("sort-products");
     if (sortSelect) {
       sortSelect.addEventListener("change", (e) =>

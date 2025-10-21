@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Machines - Tacquet Industries</title>
-    <link rel="stylesheet" href="/css/main.css?v=15" />
+    <link rel="stylesheet" href="/css/main.css?v=18" />
   </head>
   <body>
     <nav>
@@ -13,54 +13,43 @@
           <img src="/assets/logo.png" alt="Logo" class="nav-logo" />
           <span class="nav-company">TACQUET INDUSTRIES</span>
         </div>
-
         <ul class="nav-links">
-          <!-- DROPDOWN Stock -->
           <li class="nav-dropdown">
             <a href="#">📦 Stock ▾</a>
             <ul class="nav-dropdown-content">
-              <li><a href="/stock-base.html">📦 Stock de base</a></li>
+              <li><a href="/">📦 Stock Général</a></li>
               <li><a href="/stock-epi.html">🦺 EPI</a></li>
               <li><a href="/stock-visserie.html">🔩 Visserie</a></li>
             </ul>
           </li>
-
-          <!-- LIEN Machines (ACTIF) -->
           <li><a href="/machines.html" class="active">🤖 Machines</a></li>
         </ul>
-
         <div class="user-info">
           <span>👤 <span id="current-user">Admin</span></span>
-          <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
+          <button class="btn-logout" onclick="logout()">🚪</button>
         </div>
       </div>
     </nav>
 
     <header>
-      <div class="header-content">
-        <h1>🤖 Machines</h1>
-        <p class="header-subtitle">Gestion des machines industrielles</p>
-        <div class="header-stats">
-          <div class="stat-card">
-            <span class="stat-number" id="total-machines">0</span>
-            <span class="stat-label">Total machines</span>
-          </div>
+      <h1>🤖 MACHINES</h1>
+      <p>Gestion des machines industrielles</p>
+      <div class="header-stats">
+        <div class="stat-card">
+          <span class="stat-number" id="total-machines">0</span>
+          <span class="stat-label">Total machines</span>
         </div>
       </div>
     </header>
 
     <div class="container">
       <div class="main-content">
+        <!-- FORMULAIRE -->
         <section class="add-section">
           <h2>➕ Ajouter une machine</h2>
-          <form id="machine-form">
+          <form id="machine-form" enctype="multipart/form-data">
             <div class="form-row">
-              <input
-                type="text"
-                id="nom"
-                placeholder="Nom de la machine *"
-                required
-              />
+              <input type="text" id="nom" placeholder="Nom *" required />
               <input
                 type="text"
                 id="reference"
@@ -69,56 +58,109 @@
               />
             </div>
             <div class="form-row">
+              <input
+                type="number"
+                id="quantite"
+                placeholder="Quantité *"
+                required
+              />
               <input type="text" id="localisation" placeholder="Localisation" />
-              <input type="text" id="type" placeholder="Type" />
             </div>
             <div class="form-row">
-              <div class="form-group" style="flex: 1">
-                <label>Modèle 3D (.GLB)</label>
-                <input type="file" id="glb_file" accept=".glb,.gltf" />
-              </div>
-              <div class="form-group" style="flex: 1">
-                <label>Lien SolidWorks (Chemin local)</label>
-                <input
-                  type="text"
-                  id="solidworks_link"
-                  placeholder="Ex: R:\MACHINES\fichier.SLDASM"
-                />
-              </div>
+              <input type="number" id="prix" placeholder="Prix" step="0.01" />
+              <input
+                type="number"
+                id="seuil_alert"
+                placeholder="Seuil"
+                value="5"
+              />
             </div>
-            <button type="submit" class="btn-primary">
-              ➕ Ajouter la machine
-            </button>
+
+            <!-- FICHIER GLB -->
+            <div style="margin: 15px 0">
+              <label
+                style="display: block; font-weight: bold; margin-bottom: 5px"
+                >📦 Modèle 3D (.GLB)</label
+              >
+              <input type="file" id="glb_file" accept=".glb,.gltf" />
+            </div>
+
+            <!-- DRAG & DROP SOLIDWORKS -->
+            <div style="margin: 15px 0">
+              <label
+                style="display: block; font-weight: bold; margin-bottom: 5px"
+                >📐 Fichier SolidWorks (Drag & Drop)</label
+              >
+              <div
+                id="solidworks-drop-zone"
+                style="
+                  border: 2px dashed #3b82f6;
+                  border-radius: 8px;
+                  padding: 30px;
+                  text-align: center;
+                  background: #f0f9ff;
+                  cursor: pointer;
+                "
+              >
+                <div style="font-size: 3em">📐</div>
+                <p style="font-weight: bold; margin: 10px 0">
+                  Glissez le fichier SolidWorks ici
+                </p>
+                <p style="color: #666; font-size: 0.9em">
+                  Le chemin sera capturé automatiquement
+                </p>
+              </div>
+              <input
+                type="text"
+                id="solidworks_link"
+                readonly
+                style="
+                  margin-top: 10px;
+                  width: 100%;
+                  font-family: monospace;
+                  font-size: 0.85em;
+                  padding: 8px;
+                "
+                placeholder="Aucun fichier"
+              />
+            </div>
+
+            <button type="submit" class="btn-primary">➕ Ajouter</button>
           </form>
         </section>
 
+        <!-- RECHERCHE -->
         <section class="search-section">
-          <input
-            id="search-machines"
-            placeholder="🔍 Rechercher une machine..."
-          />
+          <input id="search-machines" placeholder="🔍 Rechercher..." />
           <select id="sort-machines">
             <option value="">📊 Trier par...</option>
-            <option value="nom">Nom (A→Z)</option>
-            <option value="type">Type</option>
+            <option value="nom">Nom</option>
+            <option value="reference">Référence</option>
           </select>
         </section>
 
-        <div id="machines-list"></div>
+        <!-- LISTE -->
+        <div id="machines-list" class="products-grid"></div>
       </div>
     </div>
 
     <div class="page-footer">
-      <p>© 2025 <span class="company-name">TACQUET INDUSTRIES</span></p>
+      <p>© 2025 TACQUET INDUSTRIES</p>
     </div>
+
+    <div
+      id="notifications"
+      style="position: fixed; top: 20px; right: 20px; z-index: 10000"
+    ></div>
 
     <script
       type="module"
       src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"
     ></script>
-    <script src="/js/auth.js"></script>
-    <script src="/js/notifications.js"></script>
+    <script src="/js/permissions.js"></script>
+    <script src="/js/app.js"></script>
     <script src="/js/nav.js"></script>
+    <script src="/js/sw-agent-client.js"></script>
     <script src="/js/machines.js"></script>
   </body>
 </html>

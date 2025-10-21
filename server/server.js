@@ -238,35 +238,73 @@ app.post(
   }
 );
 
+// PUT modifier machine
 app.put(
-  "/api/products/:id",
+  "/api/machines/:id",
   requireAuth,
-  checkPermission("operator"),
+  checkPermission("admin"),
+  upload.single("glb_file"),
   (req, res) => {
-    const { nom, quantite, localisation, prix, seuil_alert } = req.body;
+    console.log("📥 PUT /api/machines/" + req.params.id);
+    console.log("Body:", req.body);
+    console.log("File:", req.file);
+
+    const {
+      nom,
+      reference,
+      quantite,
+      localisation,
+      prix,
+      seuil_alert,
+      solidworks_link,
+    } = req.body;
     const { id } = req.params;
 
-    // Si l'utilisateur n'est pas admin, empêche la modification du prix
-    if (req.session.user.role !== "admin" && prix !== undefined) {
-      return res
-        .status(403)
-        .json({ error: "Seul l'admin peut modifier les prix" });
+    // ✅ VALIDATION
+    if (!nom || !reference || !quantite) {
+      console.error("❌ Champs manquants:", { nom, reference, quantite });
+      return res.status(400).json({ error: "Champs obligatoires manquants" });
     }
 
-    let query, params;
-    if (req.session.user.role === "admin") {
-      query =
-        "UPDATE products SET nom=?, quantite=?, localisation=?, prix=?, seuil_alert=? WHERE id=?";
-      params = [nom, quantite, localisation, prix, seuil_alert, id];
-    } else {
-      query =
-        "UPDATE products SET nom=?, quantite=?, localisation=?, seuil_alert=? WHERE id=?";
-      params = [nom, quantite, localisation, seuil_alert, id];
+    // Prépare les champs à mettre à jour
+    let query = `UPDATE machines SET 
+      nom = ?,
+      reference = ?,
+      quantite = ?,
+      localisation = ?,
+      prix = ?,
+      seuil_alert = ?,
+      solidworks_link = ?`;
+
+    let params = [
+      nom,
+      reference,
+      parseInt(quantite),
+      localisation || null,
+      parseFloat(prix) || 0,
+      parseInt(seuil_alert) || 5,
+      solidworks_link || null,
+    ];
+
+    // Si nouveau fichier GLB uploadé
+    if (req.file) {
+      query += `, glb_path = ?`;
+      params.push(`/assets/uploads/${req.file.filename}`);
     }
 
-    db.run(query, params, (err) => {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ message: "Produit modifié" });
+    query += ` WHERE id = ?`;
+    params.push(id);
+
+    console.log("🔧 Query:", query);
+    console.log("🔧 Params:", params);
+
+    db.run(query, params, function (err) {
+      if (err) {
+        console.error("❌ Erreur UPDATE:", err);
+        return res.status(500).json({ error: err.message });
+      }
+      console.log("✅ Machine modifiée");
+      res.json({ message: "Machine modifiée avec succès" });
     });
   }
 );
@@ -501,6 +539,220 @@ app.delete(
 // ========== ROUTES MAINTENANCES =============
 // ============================================
 
+// ============================================
+// ========== ROUTES MACHINES =================
+// ============================================
+
+// GET toutes les machines
+app.get("/api/machines", requireAuth, (req, res) => {
+  db.all("SELECT * FROM machines ORDER BY nom", (err, rows) => {
+    if (err) {
+      console.error("Erreur GET machines:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(rows);
+  });
+});
+
+// GET une machine
+app.get("/api/machines/:id", requireAuth, (req, res) => {
+  db.get("SELECT * FROM machines WHERE id = ?", [req.params.id], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row) return res.status(404).json({ error: "Machine non trouvée" });
+    res.json(row);
+  });
+});
+
+// POST nouvelle machine
+app.post(
+  "/api/machines",
+  requireAuth,
+  checkPermission("admin"),
+  upload.single("glb_file"),
+  (req, res) => {
+    console.log("📥 POST /api/machines");
+    console.log("Body:", req.body);
+    console.log("File:", req.file);
+
+    const {
+      nom,
+      reference,
+      quantite,
+      localisation,
+      prix,
+      seuil_alert,
+      solidworks_link,
+    } = req.body;
+
+    const glb_path = req.file ? `/assets/uploads/${req.file.filename}` : null;
+
+    if (!nom || !reference || !quantite) {
+      return res.status(400).json({ error: "Champs obligatoires manquants" });
+    }
+
+    db.run(
+      `INSERT INTO machines (nom, reference, quantite, localisation, prix, seuil_alert, glb_path, solidworks_link) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        nom,
+        reference,
+        parseInt(quantite),
+        localisation || null,
+        parseFloat(prix) || 0,
+        parseInt(seuil_alert) || 5,
+        glb_path,
+        solidworks_link || null,
+      ],
+      function (err) {
+        if (err) {
+          console.error("❌ Erreur INSERT:", err);
+          return res.status(500).json({ error: err.message });
+        }
+        console.log("✅ Machine ajoutée, ID:", this.lastID);
+        res.json({ id: this.lastID, message: "Machine ajoutée" });
+      }
+    );
+  }
+);
+
+// PUT modifier machine
+app.put(
+  "/api/machines/:id",
+  requireAuth,
+  checkPermission("admin"),
+  upload.single("glb_file"),
+  (req, res) => {
+    console.log("📥 PUT /api/machines/" + req.params.id);
+    console.log("Body:", req.body);
+    console.log("File:", req.file);
+
+    const {
+      nom,
+      reference,
+      quantite,
+      localisation,
+      prix,
+      seuil_alert,
+      solidworks_link,
+    } = req.body;
+    const { id } = req.params;
+
+    let query = `UPDATE machines SET nom=?, reference=?, quantite=?, localisation=?, prix=?, seuil_alert=?, solidworks_link=?`;
+    let params = [
+      nom,
+      reference,
+      parseInt(quantite),
+      localisation,
+      parseFloat(prix),
+      parseInt(seuil_alert),
+      solidworks_link,
+    ];
+
+    // Si nouveau fichier GLB
+    if (req.file) {
+      query += `, glb_path=?`;
+      params.push(`/assets/uploads/${req.file.filename}`);
+    }
+
+    query += ` WHERE id=?`;
+    params.push(id);
+
+    db.run(query, params, function (err) {
+      if (err) {
+        console.error("❌ Erreur UPDATE:", err);
+        return res.status(500).json({ error: err.message });
+      }
+      console.log("✅ Machine modifiée");
+      res.json({ message: "Machine modifiée" });
+    });
+  }
+);
+
+// DELETE machine
+app.delete(
+  "/api/machines/:id",
+  requireAuth,
+  checkPermission("admin"),
+  (req, res) => {
+    const { id } = req.params;
+    console.log("🗑️ DELETE /api/machines/" + id);
+
+    db.get(
+      "SELECT glb_path FROM machines WHERE id = ?",
+      [id],
+      (err, machine) => {
+        if (err) {
+          console.error("❌ Erreur SELECT:", err);
+          return res.status(500).json({ error: err.message });
+        }
+
+        // Supprime le fichier GLB
+        if (machine && machine.glb_path) {
+          const filePath = path.join(
+            __dirname,
+            "..",
+            "public",
+            machine.glb_path
+          );
+          if (fs.existsSync(filePath)) {
+            try {
+              fs.unlinkSync(filePath);
+              console.log("✅ Fichier GLB supprimé");
+            } catch (err) {
+              console.error("❌ Erreur suppression fichier:", err);
+            }
+          }
+        }
+
+        // Supprime les fichiers associés
+        db.all(
+          "SELECT path FROM machine_files WHERE machine_id = ?",
+          [id],
+          (err, files) => {
+            if (files && files.length > 0) {
+              files.forEach((file) => {
+                const filePath = path.join(
+                  __dirname,
+                  "..",
+                  "public",
+                  file.path
+                );
+                if (fs.existsSync(filePath)) {
+                  try {
+                    fs.unlinkSync(filePath);
+                  } catch (err) {
+                    console.error("Erreur:", err);
+                  }
+                }
+              });
+            }
+
+            // Supprime maintenances
+            db.run("DELETE FROM maintenances WHERE machine_id = ?", [id]);
+
+            // Supprime fichiers BD
+            db.run("DELETE FROM machine_files WHERE machine_id = ?", [id]);
+
+            // Supprime la machine
+            db.run("DELETE FROM machines WHERE id = ?", [id], (err) => {
+              if (err) {
+                console.error("❌ Erreur DELETE:", err);
+                return res.status(500).json({ error: err.message });
+              }
+              console.log("✅ Machine supprimée");
+              res.json({ message: "Machine supprimée" });
+            });
+          }
+        );
+      }
+    );
+  }
+);
+
+// ============================================
+// ========== ROUTES MAINTENANCES =============
+// ============================================
+
 app.get("/api/machines/:id/maintenances", requireAuth, (req, res) => {
   db.all(
     "SELECT * FROM maintenances WHERE machine_id = ? ORDER BY date_programmee DESC",
@@ -532,31 +784,8 @@ app.post("/api/machines/:id/maintenances", requireAuth, (req, res) => {
   );
 });
 
-app.put("/api/maintenances/:id", requireAuth, (req, res) => {
-  const { status, date_realisee, priority } = req.body;
-  db.run(
-    `UPDATE maintenances SET status=?, date_realisee=?, priority=? WHERE id=?`,
-    [status, date_realisee || null, priority || "medium", req.params.id],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ message: "Mise à jour réussie" });
-    }
-  );
-});
-
-app.delete("/api/maintenances/:id", requireAuth, (req, res) => {
-  db.run(
-    "DELETE FROM maintenances WHERE id=?",
-    [req.params.id],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ message: "Suppression réussie" });
-    }
-  );
-});
-
 // ============================================
-// ========== ROUTES FICHIERS/PDF =============
+// ========== ROUTES FICHIERS =================
 // ============================================
 
 app.get("/api/machines/:machineId/files", requireAuth, (req, res) => {
@@ -577,27 +806,26 @@ app.post(
   (req, res) => {
     try {
       if (!req.file) {
-        return res.status(400).json({ error: "Aucun fichier fourni" });
+        return res.status(400).json({ error: "Aucun fichier" });
       }
 
-      const filename =
-        req.body.filename || req.file.originalname.replace(".pdf", "");
-      const filepath = `/assets/uploads/${req.file.filename}`; // ← CHANGÉ ICI
+      const filename = req.body.filename || req.file.originalname;
+      const filepath = `/assets/uploads/${req.file.filename}`;
 
       db.run(
-        `INSERT INTO machine_files (machine_id, filename, path, type, uploaded_at) 
-       VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-        [req.params.machineId, filename, filepath, "pdf"],
+        `INSERT INTO machine_files (machine_id, filename, path, uploaded_at) 
+         VALUES (?, ?, ?, CURRENT_TIMESTAMP)`,
+        [req.params.machineId, filename, filepath],
         function (err) {
           if (err) {
-            console.error("Erreur insertion DB:", err);
+            console.error("Erreur:", err);
             return res.status(500).json({ error: err.message });
           }
           res.json({ success: true, id: this.lastID, path: filepath });
         }
       );
     } catch (error) {
-      console.error("Erreur upload:", error);
+      console.error("Erreur:", error);
       res.status(500).json({ error: error.message });
     }
   }
@@ -612,13 +840,11 @@ app.delete("/api/machines/files/:fileId", requireAuth, (req, res) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!file) return res.status(404).json({ error: "Fichier non trouvé" });
 
-        // Supprimer le fichier physique
-        const filepath = path.join(__dirname, "public", file.path);
+        const filepath = path.join(__dirname, "..", "public", file.path);
         if (fs.existsSync(filepath)) {
           fs.unlinkSync(filepath);
         }
 
-        // Supprimer l'enregistrement BD
         db.run(
           "DELETE FROM machine_files WHERE id = ?",
           [req.params.fileId],
