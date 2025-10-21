@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Stock EPI - Tacquet Industries</title>
+  <title>Stock de base - Tacquet Industries</title>
   <link rel="stylesheet" href="/css/main.css?v=15" />
 </head>
 <body>
@@ -38,15 +38,15 @@
 
   <header>
     <div class="header-content">
-      <h1>🦺 Stock EPI</h1>
-      <p class="header-subtitle">Équipements de protection individuelle</p>
+      <h1>📦 Stock de base</h1>
+      <p class="header-subtitle">Gestion du stock général</p>
       <div class="header-stats">
         <div class="stat-card">
-          <span class="stat-number" id="total-epi">0</span>
-          <span class="stat-label">Total EPI</span>
+          <span class="stat-number" id="total-stock">0</span>
+          <span class="stat-label">Total articles</span>
         </div>
         <div class="stat-card alert">
-          <span class="stat-number" id="epi-alert">0</span>
+          <span class="stat-number" id="stock-alert">0</span>
           <span class="stat-label">⚠️ En alerte</span>
         </div>
       </div>
@@ -55,9 +55,10 @@
 
   <div class="container">
     <div class="main-content">
+      <!-- Formulaire -->
       <section class="add-section">
-        <h2>➕ Ajouter un EPI</h2>
-        <form id="epi-form">
+        <h2>➕ Ajouter un article</h2>
+        <form id="stock-form">
           <div class="form-row">
             <input type="text" id="nom" placeholder="Nom du produit *" required />
             <input type="number" id="quantite" placeholder="Quantité *" required />
@@ -66,13 +67,17 @@
             <input type="text" id="localisation" placeholder="Localisation" />
             <input type="number" id="prix" placeholder="Prix unitaire" step="0.01" />
           </div>
-          <button type="submit" class="btn-primary">➕ Ajouter EPI</button>
+          <div class="form-row">
+            <input type="number" id="seuil_alert" placeholder="Seuil alerte" value="10" />
+          </div>
+          <button type="submit" class="btn-primary">➕ Ajouter</button>
         </form>
       </section>
 
+      <!-- Recherche/Tri -->
       <section class="search-section">
-        <input id="search-epi" placeholder="🔍 Rechercher..." />
-        <select id="sort-epi">
+        <input id="search-stock" placeholder="🔍 Rechercher..." />
+        <select id="sort-stock">
           <option value="">📊 Trier par...</option>
           <option value="nom">Nom (A→Z)</option>
           <option value="quantite-asc">Quantité (↓)</option>
@@ -80,7 +85,14 @@
         </select>
       </section>
 
-      <div id="epi-list"></div>
+      <!-- Liste -->
+      <div id="stock-list">
+        <div class="empty-state">
+          <div class="empty-state-icon">📦</div>
+          <h3>Stock de base</h3>
+          <p>Page en construction</p>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -91,6 +103,5 @@
   <script src="/js/auth.js"></script>
   <script src="/js/notifications.js"></script>
   <script src="/js/nav.js"></script>
-  <script src="/js/stock-epi.js"></script>
 </body>
 </html>
