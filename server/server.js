@@ -961,3 +961,6 @@ pause >nul
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`✅ Serveur lancé sur http://${LOCAL_IP}:${PORT}`);
 });
+
+const machinesRouter = require('./routes/machines');
+app.use('/api', machinesRouter);

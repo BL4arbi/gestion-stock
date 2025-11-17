@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gestion Utilisateurs - Tacquet Industries</title>
-    <link rel="stylesheet" href="/css/main.css?v=12" />
+    <link rel="stylesheet" href="/css/main.css?v=15" />
     <link rel="icon" type="image/png" href="/assets/favicon.png" />
   </head>
   <body>
@@ -12,14 +12,28 @@
       <div class="nav-container">
         <div class="nav-brand">
           <img src="/assets/logo.png" alt="Logo" class="nav-logo" />
-          <span class="nav-company">Tacquet Industries</span>
+          <span class="nav-company">TACQUET INDUSTRIES</span>
         </div>
-        <a href="/">📦 Stock</a>
-        <a href="/machines.html">🤖 Machines</a>
-        <a href="/users.html" class="active">👥 Utilisateurs</a>
+
+        <!-- ✅ MÊME STRUCTURE -->
+        <ul class="nav-links">
+          <li><a href="/">🏠 Accueil</a></li> <!-- ✅ AJOUT (sans .active) -->
+          
+          <li class="nav-dropdown">
+            <a href="#">📦 Stock ▾</a>
+            <ul class="nav-dropdown-content">
+              <li><a href="/stock-base.html">📦 Stock de base</a></li>
+              <li><a href="/stock-epi.html">🦺 EPI</a></li>
+              <li><a href="/stock-visserie.html">🔩 Visserie</a></li>
+            </ul>
+          </li>
+
+          <li><a href="/machines.html">🤖 Machines</a></li>
+        </ul>
+
         <div class="user-info">
           <span>👤 <span id="current-user">Admin</span></span>
-          <button class="btn-logout" onclick="logout()">🚪</button>
+          <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
         </div>
       </div>
     </nav>
@@ -76,5 +90,6 @@
 
     <script src="/js/permissions.js"></script>
     <script src="/js/app.js"></script>
+    <script src="/js/nav.js"></script>
   </body>
 </html>

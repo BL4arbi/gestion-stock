@@ -142,8 +142,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       const localisation = document.getElementById("localisation").value || "";
       const prix = document.getElementById("prix").value || "0";
       const seuil_alert = document.getElementById("seuil_alert").value || "5";
-      const solidworks_link =
-        document.getElementById("solidworks_link").value || "";
+      const solidworks_link = document.getElementById("solidworks_link").value || "";
+      
+      // ✅ AJOUTER
+      const dimensions = document.getElementById("dimensions").value || "";
+      const poids = document.getElementById("poids").value || "0";
 
       if (!nom || !reference || !quantite) {
         showNotification("❌ Remplissez les champs obligatoires", "error");
@@ -158,6 +161,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       formData.append("prix", prix);
       formData.append("seuil_alert", seuil_alert);
       formData.append("solidworks_link", solidworks_link);
+      
+      // ✅ AJOUTER
+      formData.append("dimensions", dimensions);
+      formData.append("poids", poids);
 
       const glbFile = document.getElementById("glb_file");
       if (glbFile && glbFile.files[0]) {
@@ -362,8 +369,11 @@ async function editMachine(id) {
   document.getElementById("localisation").value = machine.localisation || "";
   document.getElementById("prix").value = machine.prix || 0;
   document.getElementById("seuil_alert").value = machine.seuil_alert || 5;
-  document.getElementById("solidworks_link").value =
-    machine.solidworks_link || "";
+  document.getElementById("solidworks_link").value = machine.solidworks_link || "";
+  
+  // ✅ AJOUTER
+  document.getElementById("dimensions").value = machine.dimensions || "";
+  document.getElementById("poids").value = machine.poids || 0;
 
   const form = document.getElementById("machine-form");
   const submitBtn = form.querySelector('button[type="submit"]');
@@ -465,20 +475,16 @@ async function openMachineDetails(id) {
       <div class="modal-body">
         <!-- INFOS -->
         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:15px;margin-bottom:25px;">
-          <div><strong>🏷️ Référence:</strong> ${escapeHtml(
-            machine.reference
-          )}</div>
+          <div><strong>🏷️ Référence:</strong> ${escapeHtml(machine.reference)}</div>
           <div><strong>📦 Quantité:</strong> ${machine.quantite}</div>
-          <div><strong>📍 Localisation:</strong> ${escapeHtml(
-            machine.localisation || "N/A"
-          )}</div>
-          <div><strong>💰 Prix:</strong> ${parseFloat(
-            machine.prix || 0
-          ).toFixed(2)}€</div>
+          <div><strong>📍 Localisation:</strong> ${escapeHtml(machine.localisation || "N/A")}</div>
+          <div><strong>💰 Prix:</strong> ${parseFloat(machine.prix || 0).toFixed(2)}€</div>
           <div><strong>⚠️ Seuil:</strong> ${machine.seuil_alert || 5}</div>
-          <div><strong>📅 Créée:</strong> ${new Date(
-            machine.created_at
-          ).toLocaleDateString("fr-FR")}</div>
+          <div><strong>📅 Créée:</strong> ${new Date(machine.created_at).toLocaleDateString("fr-FR")}</div>
+          
+          <!-- ✅ AJOUTER -->
+          ${machine.dimensions ? `<div><strong>📏 Dimensions:</strong> ${escapeHtml(machine.dimensions)}</div>` : ''}
+          ${machine.poids ? `<div><strong>⚖️ Poids:</strong> ${parseFloat(machine.poids).toFixed(2)} kg</div>` : ''}
         </div>
 
         <!-- SOLIDWORKS -->
@@ -610,4 +616,67 @@ function escapeHtml(text) {
   const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
+}
+
+function displayMachines(machines) {
+  const container = document.getElementById('machines-list');
+
+  if (!machines || machines.length === 0) {
+    container.innerHTML = '<div class="empty-state">Aucune machine disponible</div>';
+    return;
+  }
+
+  container.innerHTML = machines
+    .map(machine => `
+      <div class="product-card">
+        <div class="product-header">
+          <h3>${machine.nom}</h3>
+          <span class="product-ref">Réf: ${machine.reference || 'N/A'}</span>
+        </div>
+        <div class="product-info">
+          <p><strong>Localisation:</strong> ${machine.localisation || 'Non défini'}</p>
+          <p><strong>Type:</strong> ${machine.type || 'Non défini'}</p>
+        </div>
+        ${machine.glb_file ? `
+          <model-viewer
+            src="/uploads/${machine.glb_file}"
+            camera-controls
+            auto-rotate
+            style="width: 100%; height: 200px;"
+          ></model-viewer>
+        ` : '<div class="no-model">📦 Pas de modèle 3D</div>'}
+        <div class="product-actions">
+          ${machine.solidworks_link ? `
+            <button onclick="openSolidWorks('${machine.solidworks_link}')" class="btn-secondary">
+              📐 SolidWorks
+            </button>
+          ` : ''}
+          
+          <!-- ✅ MODIFIER LE BOUTON DÉTAILS -->
+          <button onclick="viewMachineDetails(${machine.id}, '${machine.nom.replace(/'/g, "\\'")}', '${(machine.reference || 'N/A').replace(/'/g, "\\'")}', '${(machine.localisation || 'N/A').replace(/'/g, "\\'")}'); openMachineModal(${machine.id})" class="btn-primary">
+            👁️ Détails
+          </button>
+          
+          ${canEdit() ? `
+            <button onclick="editMachine(${machine.id})" class="btn-edit">✏️ Modifier</button>
+            <button onclick="deleteMachine(${machine.id})" class="btn-delete">🗑️ Supprimer</button>
+          ` : ''}
+        </div>
+      </div>
+    `)
+    .join('');
+}
+
+// ✅ AJOUTER CETTE FONCTION
+function viewMachineDetails(id, nom, reference, localisation) {
+  // Sauvegarder dans localStorage
+  localStorage.setItem('lastViewedMachine', JSON.stringify({
+    id: id,
+    nom: nom,
+    reference: reference,
+    localisation: localisation,
+    timestamp: Date.now()
+  }));
+  
+  console.log('Machine consultée:', nom);
 }

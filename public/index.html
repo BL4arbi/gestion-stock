@@ -3,36 +3,32 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Stock Général - Tacquet Industries</title>
-    <link rel="stylesheet" href="/css/main.css?v=14" />
+    <title>Dashboard - Tacquet Industries</title>
+    <link rel="stylesheet" href="/css/main.css?v=15" />
     <link rel="icon" type="image/png" href="/assets/favicon.png" />
   </head>
   <body>
-    <!-- NAVIGATION -->
     <nav>
       <div class="nav-container">
         <div class="nav-brand">
-          <img
-            src="/assets/logo.png"
-            alt="Logo Tacquet Industries"
-            class="nav-logo"
-          />
-          <span class="nav-company">Tacquet Industries</span>
+          <img src="/assets/logo.png" alt="Logo" class="nav-logo" />
+          <span class="nav-company">TACQUET INDUSTRIES</span>
         </div>
 
-        <!-- Menu déroulant Stock -->
-        <div class="nav-dropdown">
-          <a href="/" class="active">
-            📦 Stock <span class="dropdown-arrow">▼</span>
-          </a>
-          <div class="nav-dropdown-content">
-            <a href="/">📦 Stock Général</a>
-            <a href="/stock-epi.html">🦺 EPI</a>
-            <a href="/stock-visserie.html">🔩 Visserie</a>
-          </div>
-        </div>
+        <ul class="nav-links">
+          <li><a href="/" class="active">🏠 Accueil</a></li> <!-- ✅ AJOUT -->
+          
+          <li class="nav-dropdown">
+            <a href="#">📦 Stock ▾</a>
+            <ul class="nav-dropdown-content">
+              <li><a href="/stock-base.html">📦 Stock de base</a></li>
+              <li><a href="/stock-epi.html">🦺 EPI</a></li>
+              <li><a href="/stock-visserie.html">🔩 Visserie</a></li>
+            </ul>
+          </li>
 
-        <a href="/machines.html">🤖 Machines</a>
+          <li><a href="/machines.html">🤖 Machines</a></li>
+        </ul>
 
         <div class="user-info">
           <span>👤 <span id="current-user">Admin</span></span>
@@ -41,105 +37,113 @@
       </div>
     </nav>
 
-    <!-- HEADER (pas de logo ici, juste les stats) -->
     <header>
       <div class="header-content">
-        <h1>📦 Gestion de Stock</h1>
-        <p class="header-subtitle">
-          Système de gestion centralisé et professionnel
-        </p>
-        <div class="header-stats">
-          <div class="stat-card">
-            <span class="stat-number" id="total-products">0</span>
-            <span class="stat-label">Produits en stock</span>
-          </div>
-          <div class="stat-card alert">
-            <span class="stat-number" id="low-stock">0</span>
-            <span class="stat-label">Alertes stock</span>
-          </div>
-        </div>
+        <h1>📊 Dashboard</h1>
+        <p class="header-subtitle">Vue d'ensemble de la gestion</p>
       </div>
     </header>
 
     <div class="container">
-      <div class="main-content">
-        <!-- Formulaire d'ajout -->
-        <section class="add-section">
-          <h2>➕ Ajouter un produit</h2>
-          <form id="product-form">
-            <div class="form-row">
-              <input
-                type="text"
-                id="nom"
-                placeholder="Nom du produit"
-                required
-              />
-              <input
-                type="number"
-                id="quantite"
-                placeholder="Quantité"
-                required
-              />
-            </div>
-            <div class="form-row">
-              <input type="text" id="localisation" placeholder="Localisation" />
-              <input
-                type="number"
-                id="prix"
-                placeholder="Prix unitaire (€)"
-                step="0.01"
-              />
-            </div>
-            <div class="form-row">
-              <input
-                type="number"
-                id="seuil"
-                placeholder="Seuil d'alerte"
-                value="10"
-              />
-              <button type="submit" class="btn-primary">
-                ➕ Ajouter au stock
-              </button>
-            </div>
-          </form>
-        </section>
+      <!-- STATISTIQUES RAPIDES -->
+      <div class="dashboard-stats">
+        <div class="stat-card">
+          <div class="stat-icon">📦</div>
+          <div class="stat-info">
+            <span class="stat-number" id="total-stock">0</span>
+            <span class="stat-label">Articles en stock</span>
+          </div>
+        </div>
+        <div class="stat-card alert">
+          <div class="stat-icon">⚠️</div>
+          <div class="stat-info">
+            <span class="stat-number" id="alerts-count">0</span>
+            <span class="stat-label">Alertes stock</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🤖</div>
+          <div class="stat-info">
+            <span class="stat-number" id="total-machines">0</span>
+            <span class="stat-label">Machines</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">💰</div>
+          <div class="stat-info">
+            <span class="stat-number" id="total-value">0€</span>
+            <span class="stat-label">Valeur totale</span>
+          </div>
+        </div>
+      </div>
 
-        <!-- Barre de recherche et tri -->
-        <section class="search-section">
-          <input
-            id="search"
-            placeholder="🔍 Rechercher un produit ou localisation..."
-          />
-          <select id="sort-products">
-            <option value="">📊 Trier par...</option>
-            <option value="nom">Nom (A→Z)</option>
-            <option value="prix-asc">Prix croissant</option>
-            <option value="prix-desc">Prix décroissant</option>
-            <option value="quantite">Quantité</option>
-            <option value="faible">⚠️ Stock faible uniquement</option>
-          </select>
-        </section>
+      <!-- GRILLE DASHBOARD -->
+      <div class="dashboard-grid">
+        <!-- ALERTES STOCK FAIBLE -->
+        <div class="dashboard-widget">
+          <div class="widget-header">
+            <h3>⚠️ Alertes Stock Faible</h3>
+            <a href="/stock-visserie.html" class="widget-link">Voir tout →</a>
+          </div>
+          <div id="low-stock-list" class="widget-content">
+            <div class="empty-state">Aucune alerte</div>
+          </div>
+        </div>
 
-        <!-- Liste des produits -->
-        <section class="products-section">
-          <h2>📋 Inventaire produits</h2>
-          <div id="products-list" class="products-grid"></div>
-        </section>
+        <!-- DERNIÈRE MACHINE CONSULTÉE -->
+        <div class="dashboard-widget">
+          <div class="widget-header">
+            <h3>🤖 Dernière Machine Consultée</h3>
+            <a href="/machines.html" class="widget-link">Voir tout →</a>
+          </div>
+          <div id="recent-machines-list" class="widget-content">
+            <div class="empty-state">Aucune machine consultée</div>
+          </div>
+        </div>
+
+        <!-- STOCK PAR CATÉGORIE -->
+        <div class="dashboard-widget">
+          <div class="widget-header">
+            <h3>📊 Stock par Catégorie</h3>
+          </div>
+          <div class="widget-content">
+            <div class="category-stat">
+              <span>🔩 Visserie</span>
+              <span class="stat-badge" id="visserie-count">0</span>
+            </div>
+            <div class="category-stat">
+              <span>🦺 EPI</span>
+              <span class="stat-badge" id="epi-count">0</span>
+            </div>
+            <div class="category-stat">
+              <span>📦 Stock de base</span>
+              <span class="stat-badge" id="base-count">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ACTIVITÉ RÉCENTE -->
+        <div class="dashboard-widget">
+          <div class="widget-header">
+            <h3>📋 Activité Récente</h3>
+          </div>
+          <div id="recent-activity" class="widget-content">
+            <div class="activity-item">
+              <span class="activity-icon">➕</span>
+              <span class="activity-text">Chargement...</span>
+              <span class="activity-time">Il y a 2h</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Footer -->
     <div class="page-footer">
-      <p>
-        © 2025 <span class="company-name">TACQUET INDUSTRIES</span> - Tous
-        droits réservés
-      </p>
-      <p>Système de gestion de stock et machines industrielles</p>
+      <p>© 2025 <span class="company-name">TACQUET INDUSTRIES</span></p>
     </div>
 
     <script src="/js/permissions.js"></script>
-    <script src="/js/app.js"></script>
     <script src="/js/nav.js"></script>
-    <script src="/js/stock-visserie.js"></script>
+    <script src="/js/dashboard.js"></script>
   </body>
 </html>

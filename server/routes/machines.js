@@ -36,9 +36,12 @@ const upload = multer({
 // =================== MACHINES =================== //
 
 // GET toutes les machines
-router.get("/", (req, res) => {
-  db.all("SELECT * FROM machines ORDER BY id DESC", [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
+router.get("/machines", (req, res) => {
+  db.all("SELECT * FROM machines ORDER BY id DESC", (err, rows) => {
+    if (err) {
+      console.error("Erreur GET machines:", err);
+      return res.status(500).json({ error: "Erreur serveur" });
+    }
     res.json(rows);
   });
 });
@@ -52,49 +55,94 @@ router.get("/:id", (req, res) => {
   });
 });
 
-// POST créer une machine
-router.post("/", upload.single("glb_file"), (req, res) => {
-  const { nom, reference, quantite, localisation, prix, seuil_alert } =
-    req.body;
-  const glbFile = req.file ? `/uploads/${req.file.filename}` : null;
+// POST créer machine
+router.post("/machines", upload.single("glb_file"), (req, res) => {
+  const {
+    nom,
+    reference,
+    quantite,
+    localisation,
+    prix,
+    seuil_alert,
+    solidworks_link,
+    dimensions,
+    poids,
+  } = req.body;
+
+  if (!nom || !reference) {
+    return res.status(400).json({ error: "Nom et référence requis" });
+  }
+
+  const glbPath = req.file ? `/uploads/${req.file.filename}` : null;
 
   db.run(
-    `INSERT INTO machines (nom, reference, quantite, localisation, prix, seuil_alert, date_creation, glb_file) 
-     VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)`,
-    [nom, reference, quantite, localisation, prix, seuil_alert, glbFile],
+    `INSERT INTO machines (nom, reference, quantite, localisation, prix, seuil_alert, solidworks_link, glb_path, dimensions, poids) 
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      nom,
+      reference,
+      quantite || 1,
+      localisation,
+      prix || 0,
+      seuil_alert || 5,
+      solidworks_link,
+      glbPath,
+      dimensions,
+      poids || 0,
+    ],
     function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.status(201).json({ success: true, id: this.lastID });
+      if (err) {
+        console.error("Erreur INSERT machine:", err);
+        return res.status(500).json({ error: "Erreur serveur" });
+      }
+      res.json({ id: this.lastID, message: "Machine créée" });
     }
   );
 });
 
-// PUT modifier une machine
-router.put("/:id", (req, res) => {
-  try {
-    const { nom, reference, quantite, localisation, prix, seuil_alert } =
-      req.body;
+// PUT modifier machine
+router.put("/machines/:id", upload.single("glb_file"), (req, res) => {
+  const { id } = req.params;
+  const {
+    nom,
+    reference,
+    quantite,
+    localisation,
+    prix,
+    seuil_alert,
+    solidworks_link,
+    dimensions,
+    poids,
+  } = req.body;
 
-    db.run(
-      `UPDATE machines SET nom = ?, reference = ?, quantite = ?, localisation = ?, prix = ?, seuil_alert = ?, date_modification = CURRENT_TIMESTAMP 
-       WHERE id = ?`,
-      [
-        nom,
-        reference,
-        quantite,
-        localisation,
-        prix,
-        seuil_alert,
-        req.params.id,
-      ],
-      function (err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true, id: req.params.id });
-      }
-    );
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  let query = `UPDATE machines SET nom=?, reference=?, quantite=?, localisation=?, prix=?, seuil_alert=?, solidworks_link=?, dimensions=?, poids=?`;
+  let params = [
+    nom,
+    reference,
+    quantite,
+    localisation,
+    prix,
+    seuil_alert,
+    solidworks_link,
+    dimensions,
+    poids || 0,
+  ];
+
+  if (req.file) {
+    query += `, glb_path=?`;
+    params.push(`/uploads/${req.file.filename}`);
   }
+
+  query += ` WHERE id=?`;
+  params.push(id);
+
+  db.run(query, params, (err) => {
+    if (err) {
+      console.error("Erreur UPDATE machine:", err);
+      return res.status(500).json({ error: "Erreur serveur" });
+    }
+    res.json({ message: "Machine modifiée" });
+  });
 });
 
 // DELETE une machine
