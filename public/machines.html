@@ -3,137 +3,207 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Machines - Tacquet Industries</title>
-    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
-    <link rel="stylesheet" href="/css/main.css?v=1010" />
-  </head>
-  <body>
-    <nav id="main-nav"></nav>
-
-    <main class="container">
-      <header class="page-header">
-        <h1>
-          🤖 Machines
-          <span id="sw-agent-status" class="agent-status ko"
-            >Agent: non connecté</span
-          >
-        </h1>
-        <button id="add-machine-btn" class="btn btn-primary">➕ Ajouter</button>
-      </header>
-
-      <!-- Formulaire d'ajout/édition -->
-      <section class="add-section" id="add-section">
-        <form id="machine-form">
-          <div class="form-grid">
-            <div class="form-field">
-              <label for="nom">Nom *</label>
-              <input id="nom" required placeholder="Ex: Fraiseuse DMG Mori" />
-            </div>
-            <div class="form-field">
-              <label for="reference">Référence *</label>
-              <input id="reference" required placeholder="Ex: DMU-50" />
-            </div>
-            <div class="form-field">
-              <label for="quantite">Quantité *</label>
-              <input id="quantite" type="number" min="0" value="1" required />
-            </div>
-            <div class="form-field">
-              <label for="localisation">Localisation</label>
-              <input id="localisation" placeholder="Ex: Atelier 1" />
-            </div>
-            <div class="form-field">
-              <label for="prix">Prix (€)</label>
-              <input id="prix" type="number" step="0.01" placeholder="0.00" />
-            </div>
-            <div class="form-field">
-              <label for="seuil_alert">Seuil d'alerte</label>
-              <input id="seuil_alert" type="number" min="0" value="5" />
-            </div>
-            <div class="form-field">
-              <label for="dimensions">Dimensions</label>
-              <input id="dimensions" placeholder="Ex: 1200x800x600" />
-            </div>
-            <div class="form-field">
-              <label for="poids">Poids (kg)</label>
-              <input id="poids" type="number" step="0.01" placeholder="0" />
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group" style="flex: 1">
-              <label for="glb_file">Modèle 3D (.glb/.gltf)</label>
-              <input type="file" id="glb_file" accept=".glb,.gltf" />
-            </div>
-            <div class="form-group" style="flex: 1">
-              <label>Fichier SolidWorks (glisser/déposer)</label>
-              <div id="solidworks-drop-zone" class="dropzone">
-                Déposez le fichier ici
-              </div>
-              <input
-                id="solidworks_link"
-                placeholder="Aucun fichier"
-                readonly
-              />
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button
-              type="button"
-              id="cancel-edit"
-              class="btn btn-secondary"
-              style="display: none"
-            >
-              Annuler
-            </button>
-            <button type="submit" class="btn btn-primary">Enregistrer</button>
-          </div>
-        </form>
-      </section>
-
-      <!-- Barre recherche / tri -->
-      <section class="filters">
-        <input
-          id="search-machines"
-          class="search-input"
-          placeholder="🔍 Rechercher..."
-        />
-        <select id="sort-machines" class="filter-select">
-          <option value="">Trier par…</option>
-          <option value="nom">Nom</option>
-          <option value="reference">Référence</option>
-        </select>
-      </section>
-
-      <!-- Liste -->
-      <section id="machines-list" class="products-grid"></section>
-    </main>
-
-    <!-- Détails (modal) -->
-    <div id="machine-modal" class="modal">
-      <div class="modal-content">
-        <span class="close" id="modal-close">&times;</span>
-        <h2 id="modal-title">Détails machine</h2>
-
-        <div class="tabs">
-          <button class="tab active" data-tab="infos">Infos</button>
-          <button class="tab" data-tab="files">Fichiers</button>
-          <button class="tab" data-tab="maintenance">Maintenance</button>
-        </div>
-
-        <div id="tab-infos" class="tab-panel active"></div>
-        <div id="tab-files" class="tab-panel"></div>
-        <div id="tab-maintenance" class="tab-panel"></div>
-      </div>
-    </div>
-
-    <script src="/js/auth.js"></script>
-    <script src="/js/notifications.js"></script>
-    <script src="/js/nav.js"></script>
+    <title>Machines - Gestion Stock</title>
+    <link rel="stylesheet" href="/css/main.css" />
+    <link rel="stylesheet" href="/css/machines.css" />
     <script
       type="module"
       src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"
     ></script>
+  </head>
+  <body>
+    <nav class="navbar">
+      <div class="nav-brand">
+        <img src="/images/logo.png" alt="Logo" class="nav-logo" />
+        <span class="nav-title">TACQUET INDUSTRIES</span>
+      </div>
+      <div class="nav-links">
+        <a href="/dashboard.html" class="nav-link">🏠 Accueil</a>
+        <a href="/stock.html" class="nav-link">📦 Stock</a>
+        <a href="/machines.html" class="nav-link active">🤖 Machines</a>
+      </div>
+      <div class="nav-user">
+        <span class="user-badge">👤 <span id="username">admin</span></span>
+        <button id="logout-btn" class="btn-logout">🚪 Déconnexion</button>
+      </div>
+    </nav>
+
+    <div class="container">
+      <header class="page-header">
+        <div class="header-left">
+          <h1>🤖 Machines</h1>
+          <span id="sw-agent-status" class="agent-badge offline">
+            <span class="badge-dot"></span>
+            Agent non connecté
+          </span>
+        </div>
+        <button id="add-machine-btn" class="btn btn-primary">
+          <span class="btn-icon">➕</span>
+          Ajouter une machine
+        </button>
+      </header>
+
+      <!-- Formulaire d'ajout/édition -->
+      <div id="machine-form-container" class="form-container hidden">
+        <div class="form-card">
+          <div class="form-header">
+            <h2 id="form-title">➕ Nouvelle machine</h2>
+            <button id="cancel-form-btn" class="btn-icon-only" title="Annuler">
+              ✕
+            </button>
+          </div>
+          <form id="machine-form" class="machine-form">
+            <div class="form-row">
+              <div class="form-field">
+                <label>Nom *</label>
+                <input
+                  type="text"
+                  name="nom"
+                  placeholder="Ex: Fraiseuse DMG Mori"
+                  required
+                />
+              </div>
+              <div class="form-field">
+                <label>Référence *</label>
+                <input
+                  type="text"
+                  name="reference"
+                  placeholder="Ex: DMU-50"
+                  required
+                />
+              </div>
+              <div class="form-field">
+                <label>Quantité *</label>
+                <input
+                  type="number"
+                  name="quantite"
+                  value="1"
+                  min="0"
+                  required
+                />
+              </div>
+              <div class="form-field">
+                <label>Localisation</label>
+                <input
+                  type="text"
+                  name="localisation"
+                  placeholder="Ex: Atelier 1"
+                />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-field">
+                <label>Prix (€)</label>
+                <input
+                  type="number"
+                  name="prix"
+                  step="0.01"
+                  min="0"
+                  value="0"
+                />
+              </div>
+              <div class="form-field">
+                <label>Seuil d'alerte</label>
+                <input type="number" name="seuil_alert" value="5" min="0" />
+              </div>
+              <div class="form-field">
+                <label>Dimensions</label>
+                <input
+                  type="text"
+                  name="dimensions"
+                  placeholder="Ex: 1200x800x600"
+                />
+              </div>
+              <div class="form-field">
+                <label>Poids (kg)</label>
+                <input
+                  type="number"
+                  name="poids"
+                  step="0.01"
+                  min="0"
+                  value="0"
+                />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-field full-width">
+                <label>Fichier SolidWorks (chemin réseau)</label>
+                <input
+                  type="text"
+                  name="solidworks_link"
+                  placeholder="Ex: R:\CAO\Machine\fichier.SLDASM"
+                />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-field full-width">
+                <label>Modèle 3D (.glb/.gltf)</label>
+                <div class="file-input-wrapper">
+                  <input
+                    type="file"
+                    name="glb_file"
+                    accept=".glb,.gltf"
+                    id="glb-input"
+                  />
+                  <label for="glb-input" class="file-label">
+                    <span class="file-icon">📁</span>
+                    <span id="file-name">Choisir un fichier</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button
+                type="button"
+                id="cancel-form-btn-2"
+                class="btn btn-secondary"
+              >
+                Annuler
+              </button>
+              <button type="submit" class="btn btn-primary">
+                <span class="btn-icon">💾</span>
+                Enregistrer
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Barre de recherche et filtres -->
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input
+            type="text"
+            id="search-input"
+            placeholder="Rechercher une machine..."
+          />
+        </div>
+        <select id="sort-select" class="sort-select">
+          <option value="recent">Plus récent</option>
+          <option value="name">Nom A-Z</option>
+          <option value="quantity">Quantité</option>
+          <option value="price">Prix</option>
+        </select>
+      </div>
+
+      <!-- Grille des machines -->
+      <div id="machines-grid" class="machines-grid">
+        <!-- Rempli dynamiquement -->
+      </div>
+    </div>
+
+    <!-- Modal détails -->
+    <div id="machine-modal" class="modal hidden">
+      <!-- Rempli dynamiquement -->
+    </div>
+
+    <script src="/js/auth.js"></script>
+    <script src="/js/notifications.js"></script>
     <script src="/js/sw-agent-client.js"></script>
     <script src="/js/machines.js"></script>
   </body>
