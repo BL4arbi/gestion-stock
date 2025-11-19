@@ -1,107 +1,107 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Stock de base - Tacquet Industries</title>
-  <link rel="stylesheet" href="/css/main.css?v=15" />
-</head>
-<body>
-  <nav>
-    <div class="nav-container">
-      <div class="nav-brand">
-        <img src="/assets/logo.png" alt="Logo" class="nav-logo" />
-        <span class="nav-company">TACQUET INDUSTRIES</span>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stock de Base - Gestion Stock</title>
+    <link rel="stylesheet" href="/css/main.css?v=999" />
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+  </head>
+  <body>
+    <nav id="main-nav"></nav>
+
+    <main class="container">
+      <div class="page-header">
+        <h1>🏭 Stock de Base (Matériaux)</h1>
+        <button id="add-product-btn" class="btn btn-primary">
+          ➕ Ajouter un matériau
+        </button>
       </div>
 
-      <ul class="nav-links">
-        <li><a href="/">🏠 Accueil</a></li> <!-- ✅ AJOUT (sans .active) -->
-        
-        <li class="nav-dropdown">
-          <a href="#">📦 Stock ▾</a>
-          <ul class="nav-dropdown-content">
-            <li><a href="/stock-base.html">📦 Stock de base</a></li>
-            <li><a href="/stock-epi.html">🦺 EPI</a></li>
-            <li><a href="/stock-visserie.html">🔩 Visserie</a></li>
-          </ul>
-        </li>
-
-        <li><a href="/machines.html">🤖 Machines</a></li>
-      </ul>
-
-      <div class="user-info">
-        <span>👤 <span id="current-user">Admin</span></span>
-        <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      </div>
-    </div>
-  </nav>
-
-  <header>
-    <div class="header-content">
-      <h1>📦 Stock de base</h1>
-      <p class="header-subtitle">Gestion du stock général</p>
-      <div class="header-stats">
-        <div class="stat-card">
-          <span class="stat-number" id="total-stock">0</span>
-          <span class="stat-label">Total articles</span>
-        </div>
-        <div class="stat-card alert">
-          <span class="stat-number" id="stock-alert">0</span>
-          <span class="stat-label">⚠️ En alerte</span>
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <div class="container">
-    <div class="main-content">
-      <!-- Formulaire -->
-      <section class="add-section">
-        <h2>➕ Ajouter un article</h2>
-        <form id="stock-form">
-          <div class="form-row">
-            <input type="text" id="nom" placeholder="Nom du produit *" required />
-            <input type="number" id="quantite" placeholder="Quantité *" required />
-          </div>
-          <div class="form-row">
-            <input type="text" id="localisation" placeholder="Localisation" />
-            <input type="number" id="prix" placeholder="Prix unitaire" step="0.01" />
-          </div>
-          <div class="form-row">
-            <input type="number" id="seuil_alert" placeholder="Seuil alerte" value="10" />
-          </div>
-          <button type="submit" class="btn-primary">➕ Ajouter</button>
-        </form>
-      </section>
-
-      <!-- Recherche/Tri -->
-      <section class="search-section">
-        <input id="search-stock" placeholder="🔍 Rechercher..." />
-        <select id="sort-stock">
-          <option value="">📊 Trier par...</option>
-          <option value="nom">Nom (A→Z)</option>
-          <option value="quantite-asc">Quantité (↓)</option>
-          <option value="quantite-desc">Quantité (↑)</option>
+      <div class="filters">
+        <input
+          type="text"
+          id="search-input"
+          placeholder="🔍 Rechercher..."
+          class="search-input"
+        />
+        <select id="filter-location" class="filter-select">
+          <option value="">Tous les emplacements</option>
         </select>
-      </section>
+      </div>
 
-      <!-- Liste -->
-      <div id="stock-list">
-        <div class="empty-state">
-          <div class="empty-state-icon">📦</div>
-          <h3>Stock de base</h3>
-          <p>Page en construction</p>
-        </div>
+      <div id="products-grid" class="products-grid"></div>
+    </main>
+
+    <!-- Modal identique -->
+    <div id="product-modal" class="modal">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2 id="modal-title">Ajouter un matériau</h2>
+
+        <form id="product-form">
+          <div class="form-group">
+            <label>Nom *</label>
+            <input type="text" id="product-nom" required />
+          </div>
+
+          <div class="form-group">
+            <label>Référence</label>
+            <input type="text" id="product-reference" />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Quantité *</label>
+              <input type="number" id="product-quantite" value="0" required />
+            </div>
+
+            <div class="form-group">
+              <label>Unité</label>
+              <select id="product-unite">
+                <option value="pièce">Pièce</option>
+                <option value="mètre">Mètre</option>
+                <option value="kg">Kilogramme</option>
+                <option value="litre">Litre</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Localisation</label>
+            <input type="text" id="product-localisation" />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Prix unitaire (€)</label>
+              <input type="number" id="product-prix" step="0.01" value="0" />
+            </div>
+
+            <div class="form-group">
+              <label>Seuil d'alerte</label>
+              <input type="number" id="product-seuil" value="5" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Notes</label>
+            <textarea id="product-notes" rows="3"></textarea>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" id="cancel-btn">
+              Annuler
+            </button>
+            <button type="submit" class="btn btn-primary">Enregistrer</button>
+          </div>
+        </form>
       </div>
     </div>
-  </div>
 
-  <div class="page-footer">
-    <p>© 2025 <span class="company-name">TACQUET INDUSTRIES</span></p>
-  </div>
-
-  <script src="/js/auth.js"></script>
-  <script src="/js/notifications.js"></script>
-  <script src="/js/nav.js"></script>
-</body>
+    <script src="/js/auth.js"></script>
+    <script src="/js/notifications.js"></script>
+    <script src="/js/nav.js"></script>
+    <script src="/js/stock-base.js"></script>
+  </body>
 </html>

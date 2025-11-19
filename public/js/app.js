@@ -59,38 +59,36 @@ async function logout() {
 // ============================================
 // NOTIFICATIONS
 // ============================================
-function showNotification(message, type = "info", duration = 4000) {
-  let container = document.getElementById("notifications");
-
-  if (!container) {
-    container = document.createElement("div");
-    container.id = "notifications";
-    container.style.cssText =
-      "position:fixed;top:20px;right:20px;z-index:10000;";
-    document.body.appendChild(container);
-  }
-
-  const notification = document.createElement("div");
-  notification.className = `notification ${type}`;
-  notification.textContent = message;
-  notification.style.cssText = `
-    padding: 16px 28px;
-    border-radius: 6px;
-    color: white;
-    font-weight: 600;
-    margin-bottom: 10px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    ${type === "success" ? "background: #27ae60;" : ""}
-    ${type === "error" ? "background: #e74c3c;" : ""}
-    ${type === "info" ? "background: #003366;" : ""}
-  `;
-
-  container.appendChild(notification);
-
-  setTimeout(() => {
-    notification.style.opacity = "0";
-    setTimeout(() => notification.remove(), 300);
-  }, duration);
+if (!window.showNotification) {
+  window.showNotification = function (message, type = "info", duration = 4000) {
+    let container = document.getElementById("notifications");
+    if (!container) {
+      container = document.createElement("div");
+      container.id = "notifications";
+      container.style.cssText =
+        "position:fixed;top:20px;right:20px;z-index:10000;";
+      document.body.appendChild(container);
+    }
+    const notification = document.createElement("div");
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+      padding: 16px 28px;
+      border-radius: 6px;
+      color: white;
+      font-weight: 600;
+      margin-bottom: 10px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      ${type === "success" ? "background: #27ae60;" : ""}
+      ${type === "error" ? "background: #e74c3c;" : ""}
+      ${type === "info" ? "background: #003366;" : ""}
+    `;
+    container.appendChild(notification);
+    setTimeout(() => {
+      notification.style.opacity = "0";
+      setTimeout(() => notification.remove(), 300);
+    }, duration);
+  };
 }
 
 // ============================================

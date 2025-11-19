@@ -4,101 +4,52 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dashboard - Tacquet Industries</title>
-    <link rel="stylesheet" href="/css/main.css?v=15" />
-    <link rel="icon" type="image/png" href="/assets/favicon.png" />
+    <link rel="stylesheet" href="/css/main.css?v=1000" />
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
   </head>
   <body>
-    <nav>
-      <div class="nav-container">
-        <div class="nav-brand">
-          <img src="/assets/logo.png" alt="Logo" class="nav-logo" />
-          <span class="nav-company">TACQUET INDUSTRIES</span>
-        </div>
+    <nav id="main-nav"></nav>
 
-        <ul class="nav-links">
-          <li><a href="/" class="active">🏠 Accueil</a></li> <!-- ✅ AJOUT -->
-          
-          <li class="nav-dropdown">
-            <a href="#">📦 Stock ▾</a>
-            <ul class="nav-dropdown-content">
-              <li><a href="/stock-base.html">📦 Stock de base</a></li>
-              <li><a href="/stock-epi.html">🦺 EPI</a></li>
-              <li><a href="/stock-visserie.html">🔩 Visserie</a></li>
-            </ul>
-          </li>
-
-          <li><a href="/machines.html">🤖 Machines</a></li>
-        </ul>
-
-        <div class="user-info">
-          <span>👤 <span id="current-user">Admin</span></span>
-          <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-        </div>
-      </div>
-    </nav>
-
-    <header>
-      <div class="header-content">
+    <main class="container">
+      <div class="page-header">
         <h1>📊 Dashboard</h1>
-        <p class="header-subtitle">Vue d'ensemble de la gestion</p>
       </div>
-    </header>
 
-    <div class="container">
-      <!-- STATISTIQUES RAPIDES -->
+      <!-- STATISTIQUES -->
       <div class="dashboard-stats">
         <div class="stat-card">
           <div class="stat-icon">📦</div>
           <div class="stat-info">
-            <span class="stat-number" id="total-stock">0</span>
-            <span class="stat-label">Articles en stock</span>
+            <div class="stat-number" id="total-products">0</div>
+            <div class="stat-label">Produits en stock</div>
           </div>
         </div>
+
         <div class="stat-card alert">
           <div class="stat-icon">⚠️</div>
           <div class="stat-info">
-            <span class="stat-number" id="alerts-count">0</span>
-            <span class="stat-label">Alertes stock</span>
+            <div class="stat-number" id="low-stock">0</div>
+            <div class="stat-label">Alertes stock bas</div>
           </div>
         </div>
+
         <div class="stat-card">
           <div class="stat-icon">🤖</div>
           <div class="stat-info">
-            <span class="stat-number" id="total-machines">0</span>
-            <span class="stat-label">Machines</span>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon">💰</div>
-          <div class="stat-info">
-            <span class="stat-number" id="total-value">0€</span>
-            <span class="stat-label">Valeur totale</span>
+            <div class="stat-number" id="total-machines">0</div>
+            <div class="stat-label">Machines</div>
           </div>
         </div>
       </div>
 
-      <!-- GRILLE DASHBOARD -->
+      <!-- WIDGETS -->
       <div class="dashboard-grid">
-        <!-- ALERTES STOCK FAIBLE -->
+        <!-- ALERTES STOCK -->
         <div class="dashboard-widget">
           <div class="widget-header">
             <h3>⚠️ Alertes Stock Faible</h3>
-            <a href="/stock-visserie.html" class="widget-link">Voir tout →</a>
           </div>
-          <div id="low-stock-list" class="widget-content">
-            <div class="empty-state">Aucune alerte</div>
-          </div>
-        </div>
-
-        <!-- DERNIÈRE MACHINE CONSULTÉE -->
-        <div class="dashboard-widget">
-          <div class="widget-header">
-            <h3>🤖 Dernière Machine Consultée</h3>
-            <a href="/machines.html" class="widget-link">Voir tout →</a>
-          </div>
-          <div id="recent-machines-list" class="widget-content">
-            <div class="empty-state">Aucune machine consultée</div>
-          </div>
+          <div id="low-stock-list" class="widget-content"></div>
         </div>
 
         <!-- STOCK PAR CATÉGORIE -->
@@ -122,27 +73,18 @@
           </div>
         </div>
 
-        <!-- ACTIVITÉ RÉCENTE -->
+        <!-- MACHINES -->
         <div class="dashboard-widget">
           <div class="widget-header">
-            <h3>📋 Activité Récente</h3>
+            <h3>🤖 Machines</h3>
           </div>
-          <div id="recent-activity" class="widget-content">
-            <div class="activity-item">
-              <span class="activity-icon">➕</span>
-              <span class="activity-text">Chargement...</span>
-              <span class="activity-time">Il y a 2h</span>
-            </div>
-          </div>
+          <div id="machines-list" class="widget-content"></div>
         </div>
       </div>
-    </div>
+    </main>
 
-    <div class="page-footer">
-      <p>© 2025 <span class="company-name">TACQUET INDUSTRIES</span></p>
-    </div>
-
-    <script src="/js/permissions.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/notifications.js"></script>
     <script src="/js/nav.js"></script>
     <script src="/js/dashboard.js"></script>
   </body>

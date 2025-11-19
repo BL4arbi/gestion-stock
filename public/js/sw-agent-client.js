@@ -1,80 +1,120 @@
 // sw-agent-client.js - Client pour communiquer avec l'agent local SolidWorks
-(function () {
-  const AGENT_URL = "http://localhost:3001"; // ✅ Changé de 5050 à 3001
-  const TOKEN = "mon-token-secret-2025"; // ✅ Ton token
+(() => {
+  const Agent = {
+    baseURL: "http://127.0.0.1:3001",
+    token: "mon-token-secret-2025",
+    online: false,
 
-  class SolidWorksAgent {
-    constructor() {
-      this.baseUrl = AGENT_URL;
-      this.token = TOKEN;
-      this.connected = false;
-      this.init();
-    }
-
-    async init() {
+    async ping() {
       try {
-        const response = await fetch(`${this.baseUrl}/health`, {
-          method: "GET",
-          mode: "cors",
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3000); // 3 sec max
+
+        const r = await fetch(`${this.baseURL}/status?t=${Date.now()}`, {
+          headers: {
+            "X-Token": this.token,
+            Authorization: `Bearer ${this.token}`,
+          },
+          cache: "no-store",
+          signal: controller.signal,
         });
 
-        if (response.ok) {
-          this.connected = true;
-          console.log("✅ Agent SolidWorks connecté sur", this.baseUrl);
+        clearTimeout(timeout);
+
+        if (r.ok) {
+          const data = await r.json().catch(() => ({}));
+          console.log("✅ Agent ping OK:", data);
+          this.online = true;
+        } else {
+          console.warn("⚠️ Agent ping refusé:", r.status);
+          this.online = false;
         }
-      } catch (error) {
-        console.warn("⚠️ Agent SolidWorks non disponible:", error.message);
-        this.connected = false;
-      }
-    }
-
-    async openFile(filePath) {
-      if (!this.connected) {
-        throw new Error(
-          "Agent SolidWorks non connecté. Assurez-vous que l'agent local tourne sur http://localhost:3001"
-        );
+      } catch (e) {
+        console.warn("⚠️ Agent ping échoué:", e.message);
+        this.online = false;
       }
 
+      window.dispatchEvent(
+        new CustomEvent(this.online ? "sw-agent:online" : "sw-agent:offline")
+      );
+      return this.online;
+    },
+
+    async open(filePath) {
+      if (!filePath) throw new Error("Chemin vide");
+
+      console.log("🔧 Tentative ouverture:", filePath);
+      console.log("🔑 Token:", this.token);
+
+      // POST /open
       try {
-        console.log("📤 Envoi requête ouverture:", filePath);
-
-        const response = await fetch(`${this.baseUrl}/open`, {
+        const r = await fetch(`${this.baseURL}/open`, {
           method: "POST",
-          mode: "cors",
           headers: {
             "Content-Type": "application/json",
+            "X-Token": this.token,
+            Authorization: `Bearer ${this.token}`,
           },
-          body: JSON.stringify({
-            filePath,
-            token: this.token,
-          }),
+          body: JSON.stringify({ path: filePath }),
         });
 
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Erreur ouverture fichier");
+        if (r.ok) {
+          const data = await r.json().catch(() => ({ success: true }));
+          console.log("✅ Succès POST:", data);
+          return data;
         }
 
-        const result = await response.json();
-        console.log("✅ Réponse agent:", result);
-        return result;
-      } catch (error) {
-        console.error("❌ Erreur openFile:", error);
-        throw error;
+        const txt = await r.text().catch(() => "");
+        console.error("❌ POST refusé:", r.status, txt);
+      } catch (e) {
+        console.error("❌ POST erreur:", e.message);
       }
-    }
 
-    async checkStatus() {
+      // GET /open (fallback)
       try {
-        const response = await fetch(`${this.baseUrl}/health`);
-        return response.ok;
-      } catch {
-        return false;
+        const url = `${this.baseURL}/open?path=${encodeURIComponent(
+          filePath
+        )}&token=${encodeURIComponent(this.token)}`;
+        const r = await fetch(url, {
+          headers: {
+            "X-Token": this.token,
+            Authorization: `Bearer ${this.token}`,
+          },
+        });
+
+        if (r.ok) {
+          const data = await r.json().catch(() => ({ success: true }));
+          console.log("✅ Succès GET:", data);
+          return data;
+        }
+
+        const txt = await r.text().catch(() => "");
+        throw new Error(`Refus ${r.status}: ${txt.slice(0, 80)}`);
+      } catch (e) {
+        throw new Error(`Impossible: ${e.message}`);
       }
-    }
+    },
+
+    setToken(tok) {
+      this.token = tok;
+      localStorage.setItem("swAgentToken", tok);
+      console.log("🔑 Token mis à jour:", tok);
+      this.ping();
+    },
+  };
+
+  window.SWAgent = Agent;
+
+  // Force le bon token au démarrage
+  const saved = localStorage.getItem("swAgentToken");
+  if (!saved || saved !== "mon-token-secret-2025") {
+    localStorage.setItem("swAgentToken", "mon-token-secret-2025");
+    Agent.token = "mon-token-secret-2025";
   }
 
-  // Créer l'instance globale
-  window.SW_AGENT = new SolidWorksAgent();
-  console.log("🔧 SW_AGENT initialisé");
+  // Premier ping immédiat
+  Agent.ping();
+
+  // Puis toutes les 8 secondes
+  setInterval(() => Agent.ping(), 8000);
 })();

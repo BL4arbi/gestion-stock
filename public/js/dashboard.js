@@ -1,144 +1,128 @@
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  console.log("🚀 Initialisation dashboard");
   await loadDashboardData();
 });
 
+// Charger les données
 async function loadDashboardData() {
   try {
-    // Charger toutes les données
-    const [visserie, epi, machines] = await Promise.all([
-      fetch('/api/visserie').then(r => r.json()),
-      fetch('/api/epi').then(r => r.json()),
-      fetch('/api/machines').then(r => r.json())
+    console.log("📥 Chargement dashboard...");
+
+    // Charger stats + produits + machines
+    const [statsRes, productsRes, machinesRes] = await Promise.all([
+      fetch("/api/dashboard/stats", { credentials: "include" }),
+      fetch("/api/products", { credentials: "include" }),
+      fetch("/api/machines", { credentials: "include" }),
     ]);
 
-    // Statistiques globales
-    const totalStock = visserie.length + epi.length;
-    const alertsCount = [...visserie, ...epi].filter(item => 
-      item.quantite <= (item.seuil_alert || 10)
-    ).length;
-    
-    const totalValue = [...visserie, ...epi].reduce((sum, item) => 
-      sum + ((item.prix || 0) * item.quantite), 0
-    );
+    if (!statsRes.ok || !productsRes.ok || !machinesRes.ok) {
+      throw new Error("Erreur chargement données");
+    }
 
-    // Mettre à jour les stats
-    document.getElementById('total-stock').textContent = totalStock;
-    document.getElementById('alerts-count').textContent = alertsCount;
-    document.getElementById('total-machines').textContent = machines.length;
-    document.getElementById('total-value').textContent = 
-      totalValue.toLocaleString('fr-FR') + '€';
+    const stats = await statsRes.json();
+    const products = await productsRes.json();
+    const machines = await machinesRes.json();
 
-    // Stats par catégorie
-    document.getElementById('visserie-count').textContent = visserie.length;
-    document.getElementById('epi-count').textContent = epi.length;
-    document.getElementById('base-count').textContent = '0'; // À implémenter
+    console.log("📊 Stats:", stats);
+    console.log("📦 Produits:", products.length);
+    console.log("🤖 Machines:", machines.length);
 
-    // Alertes stock faible
-    displayLowStock([...visserie, ...epi]);
-
-    // Machines récentes
-    displayRecentMachines(machines);
-
-    // Activité récente (simulée pour l'instant)
-    displayRecentActivity();
-
+    // Mettre à jour l'affichage
+    updateStats(stats, products, machines);
+    updateLowStockList(products);
+    updateCategoryStats(products);
+    updateMachinesList(machines);
   } catch (error) {
-    console.error('Erreur chargement dashboard:', error);
+    console.error("❌ Erreur dashboard:", error);
+    showNotification("Erreur de chargement", "error");
   }
 }
 
-function displayLowStock(items) {
-  const container = document.getElementById('low-stock-list');
-  const lowStock = items
-    .filter(item => item.quantite <= (item.seuil_alert || 10))
-    .slice(0, 5);
+// Mettre à jour les stats principales
+function updateStats(stats, products, machines) {
+  // Total produits
+  const totalEl = document.getElementById("total-products");
+  if (totalEl) totalEl.textContent = products.length;
+
+  // Produits en alerte
+  const lowStock = products.filter((p) => p.quantite <= (p.seuil_alert || 10));
+  const lowStockEl = document.getElementById("low-stock");
+  if (lowStockEl) lowStockEl.textContent = lowStock.length;
+
+  // Total machines
+  const machinesEl = document.getElementById("total-machines");
+  if (machinesEl) machinesEl.textContent = machines.length;
+}
+
+// Afficher les produits en alerte
+function updateLowStockList(products) {
+  const container = document.getElementById("low-stock-list");
+  if (!container) return;
+
+  const lowStock = products.filter((p) => p.quantite <= (p.seuil_alert || 10));
 
   if (lowStock.length === 0) {
     container.innerHTML = '<div class="empty-state">✅ Aucune alerte</div>';
     return;
   }
 
-  container.innerHTML = lowStock.map(item => `
-    <div class="alert-item">
-      <div>
-        <span class="alert-name">${item.nom}</span>
-        <div style="font-size: 0.85em; color: #6b7280;">
-          ${item.localisation || 'Sans localisation'}
+  container.innerHTML = lowStock
+    .slice(0, 5)
+    .map(
+      (p) => `
+    <div class="widget-item">
+      <div class="widget-item-icon">⚠️</div>
+      <div class="widget-item-content">
+        <div class="widget-item-title">${p.nom}</div>
+        <div class="widget-item-subtitle">
+          Stock: ${p.quantite} ${p.unite} (seuil: ${p.seuil_alert})
         </div>
       </div>
-      <div class="alert-stock">
-        ${item.quantite} / ${item.seuil_alert || 10}
-      </div>
     </div>
-  `).join('');
+  `
+    )
+    .join("");
 }
 
-function displayRecentMachines(machines) {
-  const container = document.getElementById('recent-machines-list');
-  
-  // ✅ Récupérer la dernière machine consultée
-  const lastViewed = JSON.parse(localStorage.getItem('lastViewedMachine') || 'null');
+// Stats par catégorie
+function updateCategoryStats(products) {
+  const categories = {
+    visserie: products.filter((p) => p.category === "visserie").length,
+    epi: products.filter((p) => p.category === "epi").length,
+    base: products.filter((p) => p.category === "base").length,
+  };
 
-  if (!lastViewed) {
-    container.innerHTML = '<div class="empty-state">Aucune machine récemment consultée</div>';
+  const visserieEl = document.getElementById("visserie-count");
+  const epiEl = document.getElementById("epi-count");
+  const baseEl = document.getElementById("base-count");
+
+  if (visserieEl) visserieEl.textContent = categories.visserie;
+  if (epiEl) epiEl.textContent = categories.epi;
+  if (baseEl) baseEl.textContent = categories.base;
+}
+
+// Liste des machines
+function updateMachinesList(machines) {
+  const container = document.getElementById("machines-list");
+  if (!container) return;
+
+  if (machines.length === 0) {
+    container.innerHTML = '<div class="empty-state">Aucune machine</div>';
     return;
   }
 
-  // Calculer le temps écoulé
-  const timeAgo = getTimeAgo(new Date(lastViewed.timestamp));
-
-  container.innerHTML = `
-    <div class="machine-item" onclick="window.location.href='/machines.html'" style="cursor: pointer;">
-      <div class="machine-icon">🤖</div>
-      <div class="machine-info">
-        <span class="machine-name">${lastViewed.nom}</span>
-        <span class="machine-ref">
-          Réf: ${lastViewed.reference || 'N/A'} • ${lastViewed.localisation || 'Sans localisation'}
-        </span>
+  container.innerHTML = machines
+    .slice(0, 5)
+    .map(
+      (m) => `
+    <div class="widget-item">
+      <div class="widget-item-icon">🤖</div>
+      <div class="widget-item-content">
+        <div class="widget-item-title">${m.nom}</div>
+        <div class="widget-item-subtitle">${m.marque || "-"}</div>
       </div>
-      <span class="activity-time">${timeAgo}</span>
     </div>
-    <div style="text-align: center; padding: 10px;">
-      <a href="/machines.html" style="color: #3b82f6; text-decoration: none; font-size: 0.9em;">
-        Voir toutes les machines →
-      </a>
-    </div>
-  `;
-}
-
-// Fonction pour afficher "Il y a X temps"
-function getTimeAgo(date) {
-  const now = new Date();
-  const diff = Math.floor((now - date) / 1000); // secondes
-
-  if (diff < 60) return 'À l\'instant';
-  if (diff < 3600) return `Il y a ${Math.floor(diff / 60)}min`;
-  if (diff < 86400) return `Il y a ${Math.floor(diff / 3600)}h`;
-  if (diff < 604800) return `Il y a ${Math.floor(diff / 86400)}j`;
-  return date.toLocaleDateString('fr-FR');
-}
-
-function displayRecentActivity() {
-  const container = document.getElementById('recent-activity');
-  
-  // Activité simulée (à remplacer par vraie BDD d'historique)
-  const activities = [
-    { icon: '➕', text: 'Ajout de 50 Vis M8', time: 'Il y a 2h' },
-    { icon: '🤖', text: 'Machine Tour CNC ajoutée', time: 'Il y a 5h' },
-    { icon: '⚠️', text: 'Alerte stock EPI Casque', time: 'Il y a 1j' },
-    { icon: '✏️', text: 'Modification stock Visserie', time: 'Il y a 2j' }
-  ];
-
-  container.innerHTML = activities.map(activity => `
-    <div class="activity-item">
-      <span class="activity-icon">${activity.icon}</span>
-      <span class="activity-text">${activity.text}</span>
-      <span class="activity-time">${activity.time}</span>
-    </div>
-  `).join('');
-}
-
-function logout() {
-  localStorage.removeItem('user');
-  window.location.href = '/login.html';
+  `
+    )
+    .join("");
 }

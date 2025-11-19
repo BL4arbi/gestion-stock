@@ -1,9 +1,56 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const dropdowns = document.querySelectorAll(
-    ".nav-dropdown, .dropdown, nav .nav-links > li:has(> ul)"
-  );
+console.log("✅ nav.js chargé");
 
-  if (dropdowns.length === 0) return;
+// ============================================
+// GÉNÉRER LA NAVIGATION
+// ============================================
+document.addEventListener("DOMContentLoaded", () => {
+  const navContainer = document.getElementById("main-nav");
+
+  // Si l'élément existe et est vide, on génère le menu
+  if (navContainer && !navContainer.innerHTML.trim()) {
+    console.log("📝 Génération du menu...");
+
+    navContainer.innerHTML = `
+      <div class="nav-container">
+        <div class="nav-brand">
+          <img src="/assets/logo.png" alt="Logo" class="nav-logo" />
+          <span class="nav-company">TACQUET INDUSTRIES</span>
+        </div>
+
+        <ul class="nav-links">
+          <li><a href="/">🏠 Accueil</a></li>
+          
+          <li class="nav-dropdown">
+            <a href="#">📦 Stock ▾</a>
+            <ul class="nav-dropdown-content">
+              <li><a href="/stock-base.html">📦 Stock de base</a></li>
+              <li><a href="/stock-epi.html">🦺 EPI</a></li>
+              <li><a href="/stock-visserie.html">🔩 Visserie</a></li>
+            </ul>
+          </li>
+
+          <li><a href="/machines.html">🤖 Machines</a></li>
+        </ul>
+
+        <div class="user-info">
+          <span>👤 <span id="current-user">Chargement...</span></span>
+          <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
+        </div>
+      </div>
+    `;
+
+    console.log("✅ Menu généré");
+  }
+
+  // ============================================
+  // GÉRER LES DROPDOWNS
+  // ============================================
+  const dropdowns = document.querySelectorAll(".nav-dropdown");
+
+  if (dropdowns.length === 0) {
+    console.log("⚠️ Aucun dropdown trouvé");
+    return;
+  }
 
   const isTouch = window.matchMedia("(hover: none)").matches;
   let activeDD = null;
@@ -30,11 +77,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   dropdowns.forEach((dd) => {
     const toggle = dd.querySelector("a");
-    const menu = dd.querySelector("ul, .dropdown-menu, .nav-dropdown-content");
+    const menu = dd.querySelector("ul, .nav-dropdown-content");
 
     if (!toggle || !menu) return;
 
-    // 🖱️ HOVER
+    // HOVER (desktop)
     if (!isTouch) {
       dd.addEventListener("mouseenter", () => open(dd));
       dd.addEventListener("mouseleave", () => scheduleClose(dd));
@@ -42,32 +89,18 @@ document.addEventListener("DOMContentLoaded", () => {
       menu.addEventListener("mouseleave", () => scheduleClose(dd));
     }
 
-    // 🖱️ CLIC - IMPORTANT: laisser les vrais liens passer!
+    // CLIC
     toggle.addEventListener("click", (e) => {
       const href = toggle.getAttribute("href");
 
-      // ❌ NE PAS bloquer si c'est un vrai lien (pas "#" et pas vide)
       if (!href || href === "#") {
-        // C'est un dropdown pur → l'empêcher et toggle
         e.preventDefault();
         e.stopPropagation();
         activeDD === dd ? closeAll() : open(dd);
       }
-      // ✅ Sinon: laisser le navigateur gérer la navigation
     });
 
-    // 📋 CLAVIER
-    toggle.addEventListener("keydown", (e) => {
-      if (
-        (e.key === "Enter" || e.key === " ") &&
-        (!toggle.href || toggle.href.endsWith("#"))
-      ) {
-        e.preventDefault();
-        toggle.click();
-      }
-    });
-
-    // Clic dans le menu
+    // Fermer en cliquant dans le menu
     menu.addEventListener("click", (e) => {
       e.stopPropagation();
       if (e.target.tagName === "A") {
@@ -76,5 +109,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // Fermer en cliquant ailleurs
   document.addEventListener("click", closeAll);
+
+  console.log(`✅ ${dropdowns.length} dropdowns initialisés`);
 });

@@ -1,209 +1,228 @@
 const API = window.location.origin + "/api";
-let allProductsVisserie = [];
+console.log("✅ stock-visserie.js chargé");
 
+let allProductsVisserie = [];
+let products = [];
+let editingProductId = null;
+
+// Charger les produits
 async function loadProductsVisserie() {
   try {
-    const response = await fetch(`${API}/products?category=visserie`, {
+    console.log("📥 Chargement des produits visserie...");
+
+    const response = await fetch("/api/products?category=visserie", {
       credentials: "include",
     });
-    if (!response.ok) throw new Error("Erreur");
-    allProductsVisserie = await response.json();
-    renderProductsVisserie(allProductsVisserie);
-    updateStatsVisserie(allProductsVisserie);
+
+    if (!response.ok) {
+      throw new Error(`Erreur ${response.status}`);
+    }
+
+    products = await response.json();
+    console.log(`✅ ${products.length} produits chargés:`, products);
+    renderProductsVisserie();
   } catch (error) {
-    console.error("Erreur:", error);
+    console.error("❌ Erreur chargement:", error);
+    showNotification("Erreur lors du chargement des produits", "error");
   }
 }
 
-function updateStatsVisserie(products) {
-  document.getElementById("total-products-visserie").textContent =
-    products.length;
-  const lowStock = products.filter((p) => p.quantite <= p.seuil_alert).length;
-  document.getElementById("low-stock-visserie").textContent = lowStock;
-}
+// Afficher les produits
+function renderProductsVisserie() {
+  const container = document.getElementById("products-grid");
 
-function renderProductsVisserie(products) {
-  const container = document.getElementById("products-list-visserie");
-  if (!products || products.length === 0) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🔩</div><h3>Aucune visserie</h3><p>Ajoutez votre premier article</p></div>`;
+  if (!container) {
+    console.error("❌ Élément #products-grid introuvable!");
     return;
   }
 
-  const perms = window.userPermissions || {
-    canAddRemoveStock: false,
-    canDelete: false,
-  };
+  console.log("🎨 Affichage de", products.length, "produits");
+
+  if (products.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <p>🔩</p>
+        <p>Aucun produit en stock</p>
+        <p style="font-size: 14px; color: #999;">Cliquez sur "Ajouter une visserie" pour commencer</p>
+      </div>
+    `;
+    return;
+  }
 
   container.innerHTML = products
     .map(
-      (p) => `
-    <div class="product-card ${p.quantite <= p.seuil_alert ? "low-stock" : ""}">
+      (product) => `
+    <div class="product-card ${
+      product.quantite <= product.seuil_alert ? "low-stock" : ""
+    }">
       <div class="product-header">
-        <h3 class="product-name">${escapeHtml(p.nom)}</h3>
-        <span class="product-quantity">${p.quantite}</span>
+        <h3>${product.nom}</h3>
+        ${
+          product.quantite <= product.seuil_alert
+            ? '<span class="badge badge-warning">⚠️ Stock bas</span>'
+            : ""
+        }
       </div>
-      <div class="product-info">
-        <strong>📍</strong> ${escapeHtml(p.localisation || "N/A")}
+      
+      <div class="product-body">
+        <p><strong>Référence:</strong> ${product.reference || "-"}</p>
+        <p><strong>Quantité:</strong> ${product.quantite} ${product.unite}</p>
+        <p><strong>Localisation:</strong> ${product.localisation || "-"}</p>
+        <p><strong>Prix:</strong> ${parseFloat(product.prix || 0).toFixed(
+          2
+        )} €</p>
+        ${
+          product.notes ? `<p><strong>Notes:</strong> ${product.notes}</p>` : ""
+        }
       </div>
-      <div class="product-info">
-        <strong>💰</strong> ${parseFloat(p.prix || 0).toFixed(2)}€
-      </div>
-      <div class="product-info">
-        <strong>⚠️</strong> Seuil: ${p.seuil_alert || 10}
-      </div>
+      
       <div class="product-actions">
-        ${
-          perms.canAddRemoveStock
-            ? `
-          <button class="btn-small btn-add" onclick="updateQuantityVisserie(${
-            p.id
-          }, ${p.quantite + 1})">➕</button>
-          <button class="btn-small btn-remove" onclick="updateQuantityVisserie(${
-            p.id
-          }, ${p.quantite - 1})">➖</button>
-        `
-            : ""
-        }
-        ${
-          perms.canDelete
-            ? `
-          <button class="btn-small btn-delete" onclick="deleteProductVisserie(${p.id})">🗑️</button>
-        `
-            : ""
-        }
+        <button onclick="editProduct(${
+          product.id
+        })" class="btn btn-sm btn-secondary">✏️ Modifier</button>
+        <button onclick="deleteProduct(${
+          product.id
+        })" class="btn btn-sm btn-danger">🗑️ Supprimer</button>
       </div>
     </div>
   `
     )
     .join("");
+
+  console.log("✅ Produits affichés");
 }
 
-async function updateQuantityVisserie(id, newQuantity) {
-  if (newQuantity < 0) {
-    showNotification("La quantité ne peut pas être négative", "error");
-    return;
-  }
+// Ouvrir le modal d'ajout
+function openAddModal() {
+  editingProductId = null;
+  document.getElementById("modal-title").textContent = "Ajouter une visserie";
+  document.getElementById("product-form").reset();
+  document.getElementById("product-modal").style.display = "block";
+}
+
+// Modifier un produit
+function editProduct(id) {
+  const product = products.find((p) => p.id === id);
+  if (!product) return;
+
+  editingProductId = id;
+  document.getElementById("modal-title").textContent = "Modifier la visserie";
+  document.getElementById("product-nom").value = product.nom;
+  document.getElementById("product-reference").value = product.reference || "";
+  document.getElementById("product-quantite").value = product.quantite;
+  document.getElementById("product-unite").value = product.unite;
+  document.getElementById("product-localisation").value =
+    product.localisation || "";
+  document.getElementById("product-prix").value = product.prix || 0;
+  document.getElementById("product-seuil").value = product.seuil_alert;
+  document.getElementById("product-notes").value = product.notes || "";
+
+  document.getElementById("product-modal").style.display = "block";
+}
+
+// Fermer le modal
+function closeModal() {
+  document.getElementById("product-modal").style.display = "none";
+  editingProductId = null;
+}
+
+// Sauvegarder le produit
+async function saveProduct(e) {
+  e.preventDefault();
+
+  const productData = {
+    nom: document.getElementById("product-nom").value.trim(),
+    reference: document.getElementById("product-reference").value.trim(),
+    quantite: parseInt(document.getElementById("product-quantite").value),
+    unite: document.getElementById("product-unite").value,
+    localisation: document.getElementById("product-localisation").value.trim(),
+    prix: parseFloat(document.getElementById("product-prix").value) || 0,
+    seuil_alert: parseInt(document.getElementById("product-seuil").value) || 10,
+    category: "visserie",
+    notes: document.getElementById("product-notes").value.trim(),
+  };
+
+  console.log("📤 Sauvegarde produit:", productData);
 
   try {
-    const product = allProductsVisserie.find((p) => p.id === id);
-    if (!product) return;
+    const url = editingProductId
+      ? `/api/products/${editingProductId}`
+      : "/api/products";
+    const method = editingProductId ? "PUT" : "POST";
 
-    const response = await fetch(`${API}/products/${id}`, {
-      method: "PUT",
+    const response = await fetch(url, {
+      method,
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({
-        nom: product.nom,
-        quantite: newQuantity,
-        localisation: product.localisation,
-        prix: product.prix,
-        seuil_alert: product.seuil_alert,
-        category: "visserie",
-      }),
+      body: JSON.stringify(productData),
     });
 
-    if (response.ok) {
-      await loadProductsVisserie();
-      showNotification("✅ Quantité mise à jour", "success");
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Erreur serveur");
     }
+
+    const result = await response.json();
+    console.log("✅ Produit sauvegardé:", result);
+
+    showNotification(
+      editingProductId
+        ? "Produit modifié avec succès"
+        : "Produit ajouté avec succès",
+      "success"
+    );
+
+    closeModal();
+    loadProductsVisserie();
   } catch (error) {
-    console.error("Erreur:", error);
-    showNotification("Erreur mise à jour", "error");
+    console.error("❌ Erreur sauvegarde:", error);
+    showNotification(error.message, "error");
   }
 }
 
-async function deleteProductVisserie(id) {
-  if (!confirm("Supprimer cet article ?")) return;
+// Supprimer un produit
+async function deleteProduct(id) {
+  if (!confirm("Êtes-vous sûr de vouloir supprimer ce produit ?")) return;
+
   try {
-    const response = await fetch(`${API}/products/${id}`, {
+    const response = await fetch(`/api/products/${id}`, {
       method: "DELETE",
       credentials: "include",
     });
-    if (response.ok) {
-      showNotification("✅ Visserie supprimée", "success");
-      loadProductsVisserie();
-    }
+
+    if (!response.ok) throw new Error("Erreur suppression");
+
+    showNotification("Produit supprimé", "success");
+    loadProductsVisserie();
   } catch (error) {
-    showNotification("❌ Erreur suppression", "error");
+    console.error("❌ Erreur suppression:", error);
+    showNotification("Erreur lors de la suppression", "error");
   }
 }
 
-function escapeHtml(text) {
-  if (!text) return "";
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
-}
+// =================== ÉVÉNEMENTS =================== //
 
-document.addEventListener("DOMContentLoaded", async () => {
-  if (!authChecked) await checkAuth();
-  await loadProductsVisserie();
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("🚀 Initialisation stock-visserie");
 
-  const searchInput = document.getElementById("search-visserie");
-  if (searchInput)
-    searchInput.addEventListener("input", (e) => {
-      const text = e.target.value.toLowerCase();
-      const filtered = allProductsVisserie.filter(
-        (p) =>
-          p.nom.toLowerCase().includes(text) ||
-          (p.localisation && p.localisation.toLowerCase().includes(text))
-      );
-      renderProductsVisserie(filtered);
-    });
+  // ✅ CHARGER IMMÉDIATEMENT (l'auth est déjà vérifiée par auth.js)
+  loadProductsVisserie();
 
-  const sortSelect = document.getElementById("sort-products-visserie");
-  if (sortSelect)
-    sortSelect.addEventListener("change", (e) => {
-      let sorted = [...allProductsVisserie];
-      switch (e.target.value) {
-        case "nom":
-          sorted.sort((a, b) => a.nom.localeCompare(b.nom));
-          break;
-        case "prix-asc":
-          sorted.sort((a, b) => (a.prix || 0) - (b.prix || 0));
-          break;
-        case "prix-desc":
-          sorted.sort((a, b) => (b.prix || 0) - (a.prix || 0));
-          break;
-        case "quantite":
-          sorted.sort((a, b) => a.quantite - b.quantite);
-          break;
-        case "faible":
-          sorted = sorted.filter((p) => p.quantite <= p.seuil_alert);
-          break;
-      }
-      renderProductsVisserie(sorted);
-    });
+  // Boutons
+  document
+    .getElementById("add-product-btn")
+    ?.addEventListener("click", openAddModal);
+  document.querySelector(".close")?.addEventListener("click", closeModal);
+  document.getElementById("cancel-btn")?.addEventListener("click", closeModal);
+  document
+    .getElementById("product-form")
+    ?.addEventListener("submit", saveProduct);
 
-  const form = document.getElementById("product-form-visserie");
-  if (form) {
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const data = {
-        nom: document.getElementById("nom-visserie").value,
-        quantite: parseInt(document.getElementById("quantite-visserie").value),
-        localisation: document.getElementById("localisation-visserie").value,
-        prix: parseFloat(document.getElementById("prix-visserie").value || 0),
-        seuil_alert: parseInt(
-          document.getElementById("seuil-visserie").value || 10
-        ),
-        category: "visserie",
-      };
-      try {
-        const response = await fetch(`${API}/products`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify(data),
-        });
-        if (response.ok) {
-          form.reset();
-          await loadProductsVisserie();
-          showNotification("✅ Visserie ajoutée", "success");
-        }
-      } catch (error) {
-        showNotification("❌ Erreur ajout", "error");
-      }
-    });
-  }
+  // Fermer modal en cliquant en dehors
+  window.addEventListener("click", (e) => {
+    const modal = document.getElementById("product-modal");
+    if (e.target === modal) {
+      closeModal();
+    }
+  });
 });

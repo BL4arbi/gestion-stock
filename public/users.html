@@ -17,8 +17,9 @@
 
         <!-- ✅ MÊME STRUCTURE -->
         <ul class="nav-links">
-          <li><a href="/">🏠 Accueil</a></li> <!-- ✅ AJOUT (sans .active) -->
-          
+          <li><a href="/">🏠 Accueil</a></li>
+          <!-- ✅ AJOUT (sans .active) -->
+
           <li class="nav-dropdown">
             <a href="#">📦 Stock ▾</a>
             <ul class="nav-dropdown-content">
@@ -46,43 +47,69 @@
     </header>
 
     <div class="container">
-      <div style="background:white;padding:30px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+      <div
+        style="
+          background: white;
+          padding: 30px;
+          border-radius: 8px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        "
+      >
         <h2>📋 Rôles et Permissions</h2>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:20px;">
-          <div style="border:2px solid #10b981;padding:20px;border-radius:8px;">
-            <h3 style="color:#10b981;margin:0 0 15px 0;">👑 ADMIN</h3>
-            <ul style="list-style:none;padding:0;margin:0;">
+        <div
+          style="
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+          "
+        >
+          <div
+            style="border: 2px solid #10b981; padding: 20px; border-radius: 8px"
+          >
+            <h3 style="color: #10b981; margin: 0 0 15px 0">👑 ADMIN</h3>
+            <ul style="list-style: none; padding: 0; margin: 0">
               <li>✓ Toutes les permissions</li>
               <li>✓ Modifier les prix</li>
               <li>✓ Supprimer machines/stock</li>
               <li>✓ Gérer les utilisateurs</li>
               <li>✓ Ajouter/Modifier tout</li>
             </ul>
-            <p style="margin-top:15px;font-size:0.9em;color:#666;"><strong>Login:</strong> admin / admin123</p>
+            <p style="margin-top: 15px; font-size: 0.9em; color: #666">
+              <strong>Login:</strong> admin / admin123
+            </p>
           </div>
 
-          <div style="border:2px solid #f59e0b;padding:20px;border-radius:8px;">
-            <h3 style="color:#f59e0b;margin:0 0 15px 0;">🔧 OPÉRATEUR</h3>
-            <ul style="list-style:none;padding:0;margin:0;">
+          <div
+            style="border: 2px solid #f59e0b; padding: 20px; border-radius: 8px"
+          >
+            <h3 style="color: #f59e0b; margin: 0 0 15px 0">🔧 OPÉRATEUR</h3>
+            <ul style="list-style: none; padding: 0; margin: 0">
               <li>✓ Ajouter/Retirer stock</li>
               <li>✓ Modifier quantités</li>
               <li>✓ Voir machines</li>
               <li>✗ Modifier les prix</li>
               <li>✗ Supprimer</li>
             </ul>
-            <p style="margin-top:15px;font-size:0.9em;color:#666;"><strong>Login:</strong> operateur / operateur123</p>
+            <p style="margin-top: 15px; font-size: 0.9em; color: #666">
+              <strong>Login:</strong> operateur / operateur123
+            </p>
           </div>
 
-          <div style="border:2px solid #6b7280;padding:20px;border-radius:8px;">
-            <h3 style="color:#6b7280;margin:0 0 15px 0;">👁️ VISITEUR</h3>
-            <ul style="list-style:none;padding:0;margin:0;">
+          <div
+            style="border: 2px solid #6b7280; padding: 20px; border-radius: 8px"
+          >
+            <h3 style="color: #6b7280; margin: 0 0 15px 0">👁️ VISITEUR</h3>
+            <ul style="list-style: none; padding: 0; margin: 0">
               <li>✓ Voir le stock</li>
               <li>✓ Voir les machines</li>
               <li>✗ Modifier quoi que ce soit</li>
               <li>✗ Ajouter/Supprimer</li>
               <li>✗ Éditer les prix</li>
             </ul>
-            <p style="margin-top:15px;font-size:0.9em;color:#666;"><strong>Login:</strong> visiteur / visiteur123</p>
+            <p style="margin-top: 15px; font-size: 0.9em; color: #666">
+              <strong>Login:</strong> visiteur / visiteur123
+            </p>
           </div>
         </div>
       </div>

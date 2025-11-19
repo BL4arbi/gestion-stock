@@ -1,17 +1,14 @@
-const API = window.location.origin + "/api";
-let allProductsEPI = [];
-
-console.log("✅ stock-epi.js chargé");
+console.log("✅ stock-base.js chargé");
 
 let products = [];
 let editingProductId = null;
 
-// Charger les EPI
-async function loadProductsEPI() {
+// Charger les matériaux
+async function loadProductsBase() {
   try {
-    console.log("📥 Chargement des EPI...");
+    console.log("📥 Chargement des matériaux...");
 
-    const response = await fetch("/api/products?category=epi", {
+    const response = await fetch("/api/products?category=base", {
       credentials: "include",
     });
 
@@ -20,16 +17,16 @@ async function loadProductsEPI() {
     }
 
     products = await response.json();
-    console.log(`✅ ${products.length} EPI chargés`);
-    renderProductsEPI();
+    console.log(`✅ ${products.length} matériaux chargés`);
+    renderProductsBase();
   } catch (error) {
     console.error("❌ Erreur chargement:", error);
-    showNotification("Erreur lors du chargement des EPI", "error");
+    showNotification("Erreur lors du chargement des matériaux", "error");
   }
 }
 
-// Afficher les EPI
-function renderProductsEPI() {
+// Afficher les matériaux
+function renderProductsBase() {
   const container = document.getElementById("products-grid");
 
   if (!container) {
@@ -40,8 +37,8 @@ function renderProductsEPI() {
   if (products.length === 0) {
     container.innerHTML = `
       <div class="empty-state">
-        <p>🦺 Aucun EPI en stock</p>
-        <p>Cliquez sur "Ajouter un EPI" pour commencer</p>
+        <p>🏭 Aucun matériau en stock</p>
+        <p>Cliquez sur "Ajouter un matériau" pour commencer</p>
       </div>
     `;
     return;
@@ -86,21 +83,21 @@ function renderProductsEPI() {
     .join("");
 }
 
-// Ouvrir modal d'ajout
+// Ouvrir modal
 function openAddModal() {
   editingProductId = null;
-  document.getElementById("modal-title").textContent = "Ajouter un EPI";
+  document.getElementById("modal-title").textContent = "Ajouter un matériau";
   document.getElementById("product-form").reset();
   document.getElementById("product-modal").style.display = "block";
 }
 
-// Modifier un EPI
+// Modifier
 function editProduct(id) {
   const product = products.find((p) => p.id === id);
   if (!product) return;
 
   editingProductId = id;
-  document.getElementById("modal-title").textContent = "Modifier l'EPI";
+  document.getElementById("modal-title").textContent = "Modifier le matériau";
   document.getElementById("product-nom").value = product.nom;
   document.getElementById("product-reference").value = product.reference || "";
   document.getElementById("product-quantite").value = product.quantite;
@@ -114,7 +111,7 @@ function editProduct(id) {
   document.getElementById("product-modal").style.display = "block";
 }
 
-// Fermer modal
+// Fermer
 function closeModal() {
   document.getElementById("product-modal").style.display = "none";
   editingProductId = null;
@@ -131,8 +128,8 @@ async function saveProduct(e) {
     unite: document.getElementById("product-unite").value,
     localisation: document.getElementById("product-localisation").value.trim(),
     prix: parseFloat(document.getElementById("product-prix").value) || 0,
-    seuil_alert: parseInt(document.getElementById("product-seuil").value) || 10,
-    category: "epi",
+    seuil_alert: parseInt(document.getElementById("product-seuil").value) || 5,
+    category: "base",
     notes: document.getElementById("product-notes").value.trim(),
   };
 
@@ -155,21 +152,21 @@ async function saveProduct(e) {
     }
 
     showNotification(
-      editingProductId ? "EPI modifié avec succès" : "EPI ajouté avec succès",
+      editingProductId ? "Matériau modifié" : "Matériau ajouté",
       "success"
     );
 
     closeModal();
-    loadProductsEPI();
+    loadProductsBase();
   } catch (error) {
-    console.error("❌ Erreur sauvegarde:", error);
+    console.error("❌ Erreur:", error);
     showNotification(error.message, "error");
   }
 }
 
 // Supprimer
 async function deleteProduct(id) {
-  if (!confirm("Êtes-vous sûr de vouloir supprimer cet EPI ?")) return;
+  if (!confirm("Supprimer ce matériau ?")) return;
 
   try {
     const response = await fetch(`/api/products/${id}`, {
@@ -179,22 +176,22 @@ async function deleteProduct(id) {
 
     if (!response.ok) throw new Error("Erreur suppression");
 
-    showNotification("EPI supprimé", "success");
-    loadProductsEPI();
+    showNotification("Matériau supprimé", "success");
+    loadProductsBase();
   } catch (error) {
     console.error("❌ Erreur:", error);
-    showNotification("Erreur lors de la suppression", "error");
+    showNotification("Erreur suppression", "error");
   }
 }
 
 // Événements
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("🚀 Initialisation stock-epi");
+  console.log("🚀 Initialisation stock-base");
 
   const checkAuthInterval = setInterval(() => {
     if (window.authChecked) {
       clearInterval(checkAuthInterval);
-      loadProductsEPI();
+      loadProductsBase();
     }
   }, 100);
 
