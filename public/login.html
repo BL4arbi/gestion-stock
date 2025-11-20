@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Connexion - Tacquet Industries</title>
     <link rel="stylesheet" href="/css/main.css?v=999" />
-    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+    <link rel="icon" type="image/png" href="/assets/logo.png" />
   </head>
   <body class="login-page">
     <div class="login-container">
       <div class="login-logo">
-        <img src="/assets/favicon.svg" alt="Logo" />
+        <img src="/assets/logo.png" alt="Logo Tacquet Industries" />
       </div>
 
       <h1 class="login-title">Bienvenue</h1>
@@ -25,7 +25,6 @@
             name="username"
             placeholder="Entrez votre nom d'utilisateur"
             required
-            autocomplete="username"
           />
         </div>
 
@@ -37,13 +36,12 @@
             name="password"
             placeholder="Entrez votre mot de passe"
             required
-            autocomplete="current-password"
           />
         </div>
 
-        <button type="submit" class="btn-login">Se connecter</button>
+        <button type="submit" class="btn btn-login">Se connecter</button>
 
-        <div class="error-message" id="error-message"></div>
+        <div id="error-message" class="error-message"></div>
       </form>
 
       <p class="footer-text">© 2025 Tacquet Industries</p>
@@ -51,11 +49,10 @@
 
     <script>
       const form = document.getElementById("login-form");
-      const errorMsg = document.getElementById("error-message");
+      const errorDiv = document.getElementById("error-message");
 
       form.addEventListener("submit", async (e) => {
         e.preventDefault();
-        errorMsg.classList.remove("show");
 
         const username = document.getElementById("username").value;
         const password = document.getElementById("password").value;
@@ -73,12 +70,14 @@
           if (response.ok) {
             window.location.href = "/";
           } else {
-            errorMsg.textContent = data.error || "Erreur de connexion";
-            errorMsg.classList.add("show");
+            errorDiv.textContent = data.error || "Erreur de connexion";
+            errorDiv.classList.add("show");
+            setTimeout(() => errorDiv.classList.remove("show"), 3000);
           }
         } catch (error) {
-          errorMsg.textContent = "Erreur de connexion au serveur";
-          errorMsg.classList.add("show");
+          errorDiv.textContent = "Erreur serveur";
+          errorDiv.classList.add("show");
+          setTimeout(() => errorDiv.classList.remove("show"), 3000);
         }
       });
     </script>
