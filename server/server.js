@@ -194,6 +194,7 @@ app.post("/api/open-file", requireAuth, (req, res) => {
 // ✅ CHARGER LES ROUTES DEPUIS LES FICHIERS
 app.use("/api/products", require("./routes/products"));
 app.use("/api/machines", require("./routes/machines"));
+app.use("/api/agent", require("./routes/agent")); // ← AJOUTER CETTE LIGNE
 app.use("/api/dashboard", require("./routes/dashboard")); // +++
 
 // ============================================

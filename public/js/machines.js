@@ -5,7 +5,61 @@ console.log("✅ machines.js chargé");
 let allMachines = [];
 let editingMachineId = null;
 let uploadedGlbFile = null;
-let uploadedSolidworksFile = null;
+
+// =================== NOTIFICATION ===================
+function showNotification(message, type = "info") {
+  const oldNotif = document.querySelector(".notification");
+  if (oldNotif) oldNotif.remove();
+
+  const notification = document.createElement("div");
+  notification.className = `notification notification-${type}`;
+  notification.textContent = message;
+
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 25px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    z-index: 10000;
+    animation: slideIn 0.3s ease-out;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  `;
+
+  const colors = {
+    success: "#10b981",
+    error: "#ef4444",
+    info: "#3b82f6",
+    warning: "#f59e0b",
+  };
+  notification.style.background = colors[type] || colors.info;
+
+  document.body.appendChild(notification);
+
+  setTimeout(() => {
+    notification.style.animation = "slideOut 0.3s ease-out";
+    setTimeout(() => notification.remove(), 300);
+  }, 3000);
+}
+
+// Ajouter les animations CSS
+if (!document.getElementById("notification-styles")) {
+  const style = document.createElement("style");
+  style.id = "notification-styles";
+  style.textContent = `
+    @keyframes slideIn {
+      from { transform: translateX(400px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOut {
+      from { transform: translateX(0); opacity: 1; }
+      to { transform: translateX(400px); opacity: 0; }
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 // =================== CHARGEMENT ===================
 document.addEventListener("DOMContentLoaded", async () => {
@@ -18,27 +72,31 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 // =================== AGENT STATUS ===================
 async function checkAgentStatus() {
+  const statusEl = document.getElementById("sw-agent-status");
+  if (!statusEl) return;
+
   try {
-    const response = await fetch(`${API}/agent/status`);
+    const response = await fetch(`${API}/agent/status`, {
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error("Agent non disponible");
+    }
+
     const data = await response.json();
 
-    const statusEl = document.getElementById("sw-agent-status");
-    if (statusEl) {
-      if (data.connected) {
-        statusEl.innerHTML = `Agent: ✅ connecté`;
-        statusEl.className = "agent-status ok";
-      } else {
-        statusEl.innerHTML = `Agent: ❌ non connecté`;
-        statusEl.className = "agent-status ko";
-      }
-    }
-  } catch (error) {
-    console.error("❌ Erreur vérification agent:", error);
-    const statusEl = document.getElementById("sw-agent-status");
-    if (statusEl) {
+    if (data.connected) {
+      statusEl.innerHTML = `Agent: ✅ connecté`;
+      statusEl.className = "agent-status ok";
+    } else {
       statusEl.innerHTML = `Agent: ❌ non connecté`;
       statusEl.className = "agent-status ko";
     }
+  } catch (error) {
+    console.error("❌ Erreur vérification agent:", error);
+    statusEl.innerHTML = `Agent: ❌ non connecté`;
+    statusEl.className = "agent-status ko";
   }
 }
 
@@ -89,16 +147,18 @@ function displayMachines(machines) {
       const hasGlb = m.glb_file ? "✅" : "❌";
       const hasSw = m.solidworks_link ? "✅" : "❌";
 
-      // Prévisualisation 3D si fichier GLB disponible
+      console.log("Machine:", m.nom, "GLB:", m.glb_file); // Debug
+
       const preview3D = m.glb_file
         ? `
           <div style="margin: 12px 0;">
             <model-viewer 
               src="${m.glb_file}" 
-              alt="${m.nom}"
+              alt="${escapeHtml(m.nom)}"
               auto-rotate 
               camera-controls 
               shadow-intensity="1"
+              environment-image="neutral"
               style="width: 100%; height: 250px; background: #0a0a0a; border-radius: 12px; border: 2px solid #dc2626;"
             ></model-viewer>
           </div>
@@ -112,7 +172,7 @@ function displayMachines(machines) {
       return `
         <div class="product-card">
           <div class="product-header">
-            <h3>${m.nom}</h3>
+            <h3>${escapeHtml(m.nom)}</h3>
             <span class="product-quantity">${m.quantite || 1}</span>
           </div>
           
@@ -120,16 +180,20 @@ function displayMachines(machines) {
           
           <div class="product-body">
             <div class="product-info">
-              <strong>Référence:</strong> ${m.reference}
+              <strong>Référence:</strong> ${escapeHtml(m.reference)}
             </div>
             ${
               m.localisation
-                ? `<div class="product-info"><strong>Localisation:</strong> ${m.localisation}</div>`
+                ? `<div class="product-info"><strong>Localisation:</strong> ${escapeHtml(
+                    m.localisation
+                  )}</div>`
                 : ""
             }
             ${
               m.dimensions
-                ? `<div class="product-info"><strong>Dimensions:</strong> ${m.dimensions}</div>`
+                ? `<div class="product-info"><strong>Dimensions:</strong> ${escapeHtml(
+                    m.dimensions
+                  )}</div>`
                 : ""
             }
             ${
@@ -164,7 +228,6 @@ function displayMachines(machines) {
 
 // =================== EVENT LISTENERS ===================
 function setupEventListeners() {
-  // Bouton ajouter
   const addBtn = document.getElementById("add-machine-btn");
   if (addBtn) {
     addBtn.addEventListener("click", () => {
@@ -174,41 +237,35 @@ function setupEventListeners() {
       if (cancelBtn) cancelBtn.style.display = "none";
       document.getElementById("add-section").style.display = "block";
       uploadedGlbFile = null;
-      uploadedSolidworksFile = null;
     });
   }
 
-  // Bouton annuler
   const cancelBtn = document.getElementById("cancel-edit");
   if (cancelBtn) {
     cancelBtn.addEventListener("click", () => {
       editingMachineId = null;
       document.getElementById("machine-form").reset();
+      document.getElementById("add-section").style.display = "none";
       cancelBtn.style.display = "none";
       uploadedGlbFile = null;
-      uploadedSolidworksFile = null;
     });
   }
 
-  // Formulaire
   const form = document.getElementById("machine-form");
   if (form) {
     form.addEventListener("submit", saveMachine);
   }
 
-  // Recherche
   const searchInput = document.getElementById("search-machines");
   if (searchInput) {
     searchInput.addEventListener("input", filterMachines);
   }
 
-  // Tri
   const sortSelect = document.getElementById("sort-machines");
   if (sortSelect) {
     sortSelect.addEventListener("change", sortMachines);
   }
 
-  // Upload fichier 3D GLB
   const glbInput = document.getElementById("glb_file");
   if (glbInput) {
     glbInput.addEventListener("change", (e) => {
@@ -217,28 +274,12 @@ function setupEventListeners() {
     });
   }
 
-  // Input texte SolidWorks (juste le chemin, pas de fichier)
-  const solidworksInput = document.getElementById("solidworks_link");
-  if (solidworksInput) {
-    solidworksInput.addEventListener("input", (e) => {
-      console.log("📝 Chemin SolidWorks:", e.target.value);
-    });
-  }
-
-  // Modal
   const modalClose = document.getElementById("modal-close");
   if (modalClose) {
-    modalClose.addEventListener("click", closeModal);
-  }
-
-  // Tabs
-  const tabs = document.querySelectorAll(".tab");
-  tabs.forEach((tab) => {
-    tab.addEventListener("click", () => {
-      const tabName = tab.dataset.tab;
-      switchTab(tabName);
+    modalClose.addEventListener("click", () => {
+      document.getElementById("machine-modal").style.display = "none";
     });
-  });
+  }
 }
 
 // =================== RECHERCHE & TRI ===================
@@ -296,13 +337,15 @@ async function saveMachine(event) {
   );
   formData.append("poids", document.getElementById("poids").value || 0);
 
-  // Chemin SolidWorks (texte)
-  const solidworksLink = document.getElementById("solidworks_link").value;
+  const solidworksLink = document
+    .getElementById("solidworks_link")
+    .value.trim();
   if (solidworksLink) {
-    formData.append("solidworks_link", solidworksLink);
+    const cleanPath = solidworksLink.replace(/^["']|["']$/g, "");
+    formData.append("solidworks_link", cleanPath);
+    console.log("📝 Chemin SolidWorks enregistré:", cleanPath);
   }
 
-  // Fichier 3D GLB (fichier)
   if (uploadedGlbFile) {
     formData.append("glb_file", uploadedGlbFile);
     console.log("📤 Upload du fichier GLB:", uploadedGlbFile.name);
@@ -326,22 +369,25 @@ async function saveMachine(event) {
 
     showNotification(
       editingMachineId
-        ? "Machine modifiée avec succès"
-        : "Machine ajoutée avec succès",
+        ? "✅ Machine modifiée avec succès"
+        : "✅ Machine ajoutée avec succès",
       "success"
     );
 
     document.getElementById("machine-form").reset();
+    document.getElementById("add-section").style.display = "none";
     const cancelBtn = document.getElementById("cancel-edit");
     if (cancelBtn) cancelBtn.style.display = "none";
     editingMachineId = null;
     uploadedGlbFile = null;
-    uploadedSolidworksFile = null;
 
     await loadMachines();
   } catch (error) {
     console.error("❌ Erreur sauvegarde:", error);
-    showNotification(error.message || "Erreur lors de la sauvegarde", "error");
+    showNotification(
+      "❌ " + (error.message || "Erreur lors de la sauvegarde"),
+      "error"
+    );
   }
 }
 
@@ -367,9 +413,8 @@ async function editMachine(id) {
     document.getElementById("poids").value = machine.poids || 0;
 
     if (machine.solidworks_link) {
-      document.getElementById("solidworks_link").value = machine.solidworks_link
-        .split("/")
-        .pop();
+      document.getElementById("solidworks_link").value =
+        machine.solidworks_link;
     }
 
     document.getElementById("cancel-edit").style.display = "inline-flex";
@@ -395,11 +440,34 @@ async function deleteMachine(id) {
 
     if (!response.ok) throw new Error("Erreur suppression");
 
-    showNotification("Machine supprimée avec succès", "success");
+    showNotification("✅ Machine supprimée avec succès", "success");
     await loadMachines();
   } catch (error) {
     console.error("❌ Erreur:", error);
-    showNotification("Erreur lors de la suppression", "error");
+    showNotification("❌ Erreur lors de la suppression", "error");
+  }
+}
+
+// =================== GESTION DES TABS ===================
+function switchTab(tabName) {
+  document.querySelectorAll(".tab").forEach((tab) => {
+    tab.classList.remove("active");
+  });
+
+  document.querySelectorAll(".tab-panel").forEach((panel) => {
+    panel.classList.remove("active");
+    panel.style.display = "none";
+  });
+
+  const activeTab = document.querySelector(`[data-tab="${tabName}"]`);
+  if (activeTab) {
+    activeTab.classList.add("active");
+  }
+
+  const activePanel = document.getElementById(`tab-${tabName}`);
+  if (activePanel) {
+    activePanel.classList.add("active");
+    activePanel.style.display = "block";
   }
 }
 
@@ -413,25 +481,30 @@ async function showMachineDetails(id) {
     if (!response.ok) throw new Error("Erreur chargement machine");
 
     const machine = await response.json();
+    console.log("Machine détails:", machine); // Debug
 
     document.getElementById("modal-title").textContent = machine.nom;
 
     // Tab Infos
     document.getElementById("tab-infos").innerHTML = `
-      <div class="product-info"><strong>Référence:</strong> ${
+      <div class="product-info"><strong>Référence:</strong> ${escapeHtml(
         machine.reference
-      }</div>
+      )}</div>
       <div class="product-info"><strong>Quantité:</strong> ${
         machine.quantite || 1
       }</div>
       ${
         machine.localisation
-          ? `<div class="product-info"><strong>Localisation:</strong> ${machine.localisation}</div>`
+          ? `<div class="product-info"><strong>Localisation:</strong> ${escapeHtml(
+              machine.localisation
+            )}</div>`
           : ""
       }
       ${
         machine.dimensions
-          ? `<div class="product-info"><strong>Dimensions:</strong> ${machine.dimensions}</div>`
+          ? `<div class="product-info"><strong>Dimensions:</strong> ${escapeHtml(
+              machine.dimensions
+            )}</div>`
           : ""
       }
       ${
@@ -451,19 +524,35 @@ async function showMachineDetails(id) {
       }
     `;
 
-    // Tab Files avec prévisualisation 3D
+    // Tab Fichiers
+    const solidworksPath = machine.solidworks_link
+      ? JSON.stringify(machine.solidworks_link)
+      : null;
+    const solidworksButton = solidworksPath
+      ? `<button class="btn btn-primary" onclick='openInSolidworks(${solidworksPath}, ${id})' style="margin-top:10px;">
+           🔧 Ouvrir dans SolidWorks
+         </button>`
+      : "";
+
+    console.log("GLB File path:", machine.glb_file); // Debug
+
     if (machine.glb_file) {
       document.getElementById("tab-files").innerHTML = `
         <div style="margin-bottom: 20px;">
           <h3>📦 Prévisualisation 3D</h3>
           <model-viewer 
             src="${machine.glb_file}" 
-            alt="${machine.nom}"
+            alt="${escapeHtml(machine.nom)}"
             auto-rotate 
             camera-controls 
             shadow-intensity="1"
-            style="width: 100%; height: 400px; background: #1a1a1a; border-radius: 12px; border: 2px solid #dc2626;"
+            environment-image="neutral"
+            style="width: 100%; height: 500px; background: #1a1a1a; border-radius: 12px; border: 2px solid #dc2626;"
+            loading="eager"
           ></model-viewer>
+          <p style="color: #999; font-size: 12px; margin-top: 8px;">Chemin: ${
+            machine.glb_file
+          }</p>
         </div>
         <div class="product-info">
           ✅ <a href="${
@@ -472,69 +561,123 @@ async function showMachineDetails(id) {
         </div>
         ${
           machine.solidworks_link
-            ? `<div class="product-info">✅ <a href="${machine.solidworks_link}" target="_blank" download>📥 Télécharger le fichier SolidWorks</a></div>`
+            ? `
+          <div class="product-info" style="margin-top: 15px;">
+            ✅ <strong>Fichier SolidWorks:</strong><br>
+            <code style="background: #2a2a2a; padding: 8px; border-radius: 4px; display: block; margin-top: 5px; word-break: break-all;">${escapeHtml(
+              machine.solidworks_link
+            )}</code>
+            ${solidworksButton}
+          </div>
+        `
             : "<div class='product-info'>❌ Aucun fichier SolidWorks</div>"
         }
       `;
     } else {
       document.getElementById("tab-files").innerHTML = `
         <div class="empty-state">
-          <p>📦</p>
+          <p style="font-size: 48px;">📦</p>
           <p>❌ Aucun modèle 3D disponible</p>
         </div>
         ${
           machine.solidworks_link
-            ? `<div class="product-info">✅ <a href="${machine.solidworks_link}" target="_blank" download>📥 Télécharger le fichier SolidWorks</a></div>`
+            ? `
+          <div class="product-info" style="margin-top: 15px;">
+            ✅ <strong>Fichier SolidWorks:</strong><br>
+            <code style="background: #2a2a2a; padding: 8px; border-radius: 4px; display: block; margin-top: 5px; word-break: break-all;">${escapeHtml(
+              machine.solidworks_link
+            )}</code>
+            ${solidworksButton}
+          </div>
+        `
             : "<div class='product-info'>❌ Aucun fichier SolidWorks</div>"
         }
       `;
     }
 
     // Tab Maintenance
-    document.getElementById(
-      "tab-maintenance"
-    ).innerHTML = `<p>Fonctionnalité à venir...</p>`;
+    document.getElementById("tab-maintenance").innerHTML = `
+      <div class="empty-state">
+        <p style="font-size: 48px;">🔧</p>
+        <p>Fonctionnalité maintenance à venir...</p>
+      </div>
+    `;
 
-    document.getElementById("machine-modal").style.display = "flex";
+    const modal = document.getElementById("machine-modal");
+    modal.style.display = "flex";
+
+    switchTab("infos");
+
+    document.querySelectorAll(".tab").forEach((tab) => {
+      tab.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        switchTab(tab.dataset.tab);
+      };
+    });
   } catch (error) {
     console.error("❌ Erreur:", error);
-    showNotification("Erreur lors du chargement des détails", "error");
+    showNotification("❌ Erreur lors du chargement des détails", "error");
   }
 }
 
-function closeModal() {
-  document.getElementById("machine-modal").style.display = "none";
+// =================== OUVRIR DANS SOLIDWORKS ===================
+async function openInSolidworks(filePath, machineId) {
+  try {
+    showNotification("🔄 Envoi de la commande à l'agent SolidWorks...", "info");
+
+    console.log("📤 Ouverture SolidWorks:", filePath);
+
+    const response = await fetch(`${API}/agent/open-solidworks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ filePath, machineId }),
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      showNotification("✅ Fichier ouvert dans SolidWorks", "success");
+      console.log("✅ Succès:", result);
+    } else {
+      throw new Error(result.error || "Erreur ouverture");
+    }
+  } catch (error) {
+    console.error("❌ Erreur ouverture SolidWorks:", error);
+
+    let errorMessage = "❌ Impossible d'ouvrir le fichier.\n\n";
+
+    if (error.message.includes("fetch")) {
+      errorMessage += "Le serveur ne répond pas.";
+    } else if (error.message.includes("agent")) {
+      errorMessage +=
+        "L'agent SolidWorks n'est pas connecté.\nLancez sw-agent.js sur le poste.";
+    } else {
+      errorMessage += error.message;
+    }
+
+    showNotification(errorMessage, "error");
+  }
 }
 
-function switchTab(tabName) {
-  document
-    .querySelectorAll(".tab")
-    .forEach((t) => t.classList.remove("active"));
-  document
-    .querySelectorAll(".tab-panel")
-    .forEach((p) => p.classList.remove("active"));
-
-  document.querySelector(`[data-tab="${tabName}"]`).classList.add("active");
-  document.getElementById(`tab-${tabName}`).classList.add("active");
-}
-
-// =================== NOTIFICATIONS ===================
-function showNotification(message, type = "info") {
-  const notification = document.createElement("div");
-  notification.className = `notification notification-${type}`;
-  notification.textContent = message;
-  document.body.appendChild(notification);
-
-  setTimeout(() => {
-    notification.remove();
-  }, 3000);
+// =================== FONCTION UTILITAIRE ===================
+function escapeHtml(unsafe) {
+  if (!unsafe) return "";
+  return unsafe
+    .toString()
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 // Fermer modal en cliquant à l'extérieur
 window.onclick = function (event) {
   const modal = document.getElementById("machine-modal");
   if (event.target === modal) {
-    closeModal();
+    modal.style.display = "none";
   }
 };
 

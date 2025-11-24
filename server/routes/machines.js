@@ -1,271 +1,274 @@
 const express = require("express");
+const router = express.Router();
+const db = require("../database");
+const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const multer = require("multer");
-const db = require("../database");
 
-const router = express.Router();
+// Configuration Multer pour l'upload de fichiers GLB
+const uploadsDir = path.join(__dirname, "..", "..", "public", "uploads");
 
-function requireAuth(req, res, next) {
-  if (req.session?.user) return next();
-  return res.status(401).json({ error: "Non authentifié" });
+// Créer le dossier uploads s'il n'existe pas
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log("📁 Dossier uploads créé:", uploadsDir);
 }
-
-const uploadsDir = path.join(process.cwd(), "public", "uploads", "machines");
-fs.mkdirSync(uploadsDir, { recursive: true });
 
 const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadsDir),
-  filename: (_req, file, cb) => {
-    const safe = file.originalname.replace(/[^\w.-]+/g, "_");
-    cb(null, Date.now() + "_" + safe);
+  destination: function (req, file, cb) {
+    cb(null, uploadsDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
   },
 });
-const upload = multer({ storage });
 
-function mapMachine(r) {
-  return {
-    id: r.id,
-    nom: r.nom,
-    reference: r.reference,
-    quantite: r.quantite ?? 0,
-    localisation: r.localisation,
-    prix: r.prix ?? 0,
-    seuil_alert: r.seuil_alert ?? 5,
-    solidworks_link: r.solidworks_link,
-    glb_path: r.glb_path,
-    dimensions: r.dimensions,
-    poids: r.poids ?? 0,
-    created_at: r.created_at,
-  };
-}
-
-// LIST
-router.get("/", requireAuth, (_req, res) => {
-  db.all("SELECT * FROM machines ORDER BY created_at DESC", (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows.map(mapMachine));
-  });
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB max
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [".glb", ".gltf"];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowedTypes.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Type de fichier non autorisé. Utilisez .glb ou .gltf"));
+    }
+  },
 });
 
-// ONE
-router.get("/:id", requireAuth, (req, res) => {
-  db.get("SELECT * FROM machines WHERE id = ?", [req.params.id], (err, row) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (!row) return res.status(404).json({ error: "Introuvable" });
-    res.json(mapMachine(row));
-  });
-});
+// =================== GET toutes les machines ===================
+router.get("/", async (req, res) => {
+  try {
+    db.all("SELECT * FROM machines ORDER BY nom", (err, rows) => {
+      if (err) {
+        console.error("❌ Erreur lecture machines:", err);
+        return res.status(500).json({ error: err.message });
+      }
 
-// CREATE
-router.post("/", requireAuth, upload.single("glb_file"), (req, res) => {
-  const b = req.body;
-  const glbPath = req.file ? `/uploads/machines/${req.file.filename}` : null;
+      // Transformer glb_path en glb_file pour le frontend
+      const machines = rows.map((m) => ({
+        ...m,
+        glb_file: m.glb_path || null,
+      }));
 
-  const sql = `
-    INSERT INTO machines
-      (nom, reference, quantite, localisation, prix, seuil_alert, solidworks_link, glb_path, dimensions, poids)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `;
-  const params = [
-    b.nom,
-    b.reference,
-    parseInt(b.quantite || 0, 10),
-    b.localisation || null,
-    parseFloat(b.prix || 0),
-    parseInt(b.seuil_alert || 5, 10),
-    b.solidworks_link || null,
-    glbPath,
-    b.dimensions || null,
-    parseFloat(b.poids || 0),
-  ];
-
-  db.run(sql, params, function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    db.get("SELECT * FROM machines WHERE id = ?", [this.lastID], (e, row) => {
-      if (e) return res.status(500).json({ error: e.message });
-      res.status(201).json(mapMachine(row));
+      console.log(`✅ ${machines.length} machines chargées`);
+      res.json(machines);
     });
-  });
-});
-
-// UPDATE
-router.put("/:id", requireAuth, upload.single("glb_file"), (req, res) => {
-  const b = req.body;
-  const id = req.params.id;
-
-  const set = [
-    "nom = ?",
-    "reference = ?",
-    "quantite = ?",
-    "localisation = ?",
-    "prix = ?",
-    "seuil_alert = ?",
-    "solidworks_link = ?",
-    "dimensions = ?",
-    "poids = ?",
-  ];
-
-  const params = [
-    b.nom,
-    b.reference,
-    parseInt(b.quantite || 0, 10),
-    b.localisation || null,
-    parseFloat(b.prix || 0),
-    parseInt(b.seuil_alert || 5, 10),
-    b.solidworks_link || null,
-    b.dimensions || null,
-    parseFloat(b.poids || 0),
-  ];
-
-  if (req.file) {
-    set.push("glb_path = ?");
-    params.push(`/uploads/machines/${req.file.filename}`);
+  } catch (error) {
+    console.error("❌ Erreur:", error);
+    res.status(500).json({ error: error.message });
   }
-
-  params.push(id);
-
-  db.run(
-    `UPDATE machines SET ${set.join(", ")} WHERE id = ?`,
-    params,
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      db.get("SELECT * FROM machines WHERE id = ?", [id], (e, row) => {
-        if (e) return res.status(500).json({ error: e.message });
-        res.json(mapMachine(row));
-      });
-    }
-  );
 });
 
-// DELETE
-router.delete("/:id", requireAuth, (req, res) => {
-  db.run("DELETE FROM machines WHERE id = ?", [req.params.id], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ ok: true });
-  });
+// =================== GET une machine ===================
+router.get("/:id", async (req, res) => {
+  try {
+    db.get("SELECT * FROM machines WHERE id = ?", [req.params.id], (err, row) => {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      if (!row) {
+        return res.status(404).json({ error: "Machine introuvable" });
+      }
+
+      // Transformer glb_path en glb_file
+      const machine = {
+        ...row,
+        glb_file: row.glb_path || null,
+      };
+
+      res.json(machine);
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// FILES
-router.get("/:machineId/files", requireAuth, (req, res) => {
-  db.all(
-    "SELECT id, filename, filepath AS path, file_type, uploaded_at FROM machine_files WHERE machine_id = ? ORDER BY uploaded_at DESC",
-    [req.params.machineId],
-    (err, rows) => {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json(rows || []);
-    }
-  );
-});
+// =================== POST créer une machine ===================
+router.post("/", upload.single("glb_file"), async (req, res) => {
+  try {
+    console.log("📥 Création machine:", req.body);
+    console.log("📁 Fichier uploadé:", req.file);
 
-// MAINTENANCE LIST
-router.get("/:machineId/maintenances", requireAuth, (req, res) => {
-  db.all(
-    "SELECT * FROM machine_maintenances WHERE machine_id = ? ORDER BY date_maintenance DESC, id DESC",
-    [req.params.machineId],
-    (err, rows) => {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json(rows || []);
-    }
-  );
-});
+    const {
+      nom,
+      reference,
+      quantite,
+      localisation,
+      prix,
+      seuil_alert,
+      dimensions,
+      poids,
+      solidworks_link,
+    } = req.body;
 
-// MAINTENANCE CREATE
-router.post(
-  "/:machineId/maintenances",
-  requireAuth,
-  express.json(),
-  (req, res) => {
-    const mid = req.params.machineId;
-    const b = req.body || {};
-    const titre = b.titre || b.type || "Maintenance";
-    const description = b.description || b.notes || null;
-    const date_maintenance =
-      b.date_maintenance || b.date || new Date().toISOString().slice(0, 10);
-    const statut = b.statut || "planifie";
+    // Construire le chemin du fichier GLB
+    const glb_path = req.file ? `/uploads/${req.file.filename}` : null;
+
+    console.log("💾 Chemin GLB:", glb_path);
 
     db.run(
-      "INSERT INTO machine_maintenances (machine_id, titre, description, date_maintenance, statut) VALUES (?, ?, ?, ?, ?)",
-      [mid, titre, description, date_maintenance, statut],
+      `INSERT INTO machines (nom, reference, quantite, localisation, prix, seuil_alert, dimensions, poids, glb_path, solidworks_link)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        nom,
+        reference,
+        quantite || 1,
+        localisation || null,
+        prix || 0,
+        seuil_alert || 5,
+        dimensions || null,
+        poids || 0,
+        glb_path,
+        solidworks_link || null,
+      ],
       function (err) {
-        if (err) return res.status(500).json({ error: err.message });
-        db.get(
-          "SELECT * FROM machine_maintenances WHERE id = ?",
-          [this.lastID],
-          (e, row) => {
-            if (e) return res.status(500).json({ error: e.message });
-            res.status(201).json(row);
+        if (err) {
+          console.error("❌ Erreur insertion:", err);
+          return res.status(500).json({ error: err.message });
+        }
+
+        console.log("✅ Machine créée avec ID:", this.lastID);
+
+        res.status(201).json({
+          id: this.lastID,
+          nom,
+          reference,
+          quantite,
+          localisation,
+          prix,
+          seuil_alert,
+          dimensions,
+          poids,
+          glb_file: glb_path, // ← Retourner glb_file
+          solidworks_link,
+        });
+      }
+    );
+  } catch (error) {
+    console.error("❌ Erreur création machine:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =================== PUT modifier une machine ===================
+router.put("/:id", upload.single("glb_file"), async (req, res) => {
+  try {
+    console.log("📝 Modification machine ID:", req.params.id);
+    console.log("📥 Données:", req.body);
+    console.log("📁 Nouveau fichier:", req.file);
+
+    const {
+      nom,
+      reference,
+      quantite,
+      localisation,
+      prix,
+      seuil_alert,
+      dimensions,
+      poids,
+      solidworks_link,
+    } = req.body;
+
+    // Récupérer l'ancienne machine pour conserver glb_path si pas de nouveau fichier
+    db.get(
+      "SELECT glb_path FROM machines WHERE id = ?",
+      [req.params.id],
+      (err, row) => {
+        if (err) {
+          return res.status(500).json({ error: err.message });
+        }
+
+        const glb_path = req.file
+          ? `/uploads/${req.file.filename}`
+          : row?.glb_path || null;
+
+        console.log("💾 Chemin GLB (update):", glb_path);
+
+        db.run(
+          `UPDATE machines SET nom = ?, reference = ?, quantite = ?, localisation = ?, prix = ?, seuil_alert = ?, dimensions = ?, poids = ?, glb_path = ?, solidworks_link = ? WHERE id = ?`,
+          [
+            nom,
+            reference,
+            quantite || 1,
+            localisation || null,
+            prix || 0,
+            seuil_alert || 5,
+            dimensions || null,
+            poids || 0,
+            glb_path,
+            solidworks_link || null,
+            req.params.id,
+          ],
+          function (err) {
+            if (err) {
+              console.error("❌ Erreur modification:", err);
+              return res.status(500).json({ error: err.message });
+            }
+
+            console.log("✅ Machine modifiée");
+
+            res.json({
+              id: req.params.id,
+              nom,
+              reference,
+              quantite,
+              localisation,
+              prix,
+              seuil_alert,
+              dimensions,
+              poids,
+              glb_file: glb_path,
+              solidworks_link,
+            });
           }
         );
       }
     );
+  } catch (error) {
+    console.error("❌ Erreur modification machine:", error);
+    res.status(500).json({ error: error.message });
   }
-);
+});
 
-// MAINTENANCE UPDATE
-router.put(
-  "/:machineId/maintenances/:id",
-  requireAuth,
-  express.json(),
-  (req, res) => {
-    const { machineId, id } = req.params;
-    const b = req.body || {};
-    const fields = [];
-    const params = [];
+// =================== DELETE supprimer une machine ===================
+router.delete("/:id", async (req, res) => {
+  try {
+    // Récupérer le fichier GLB pour le supprimer
+    db.get(
+      "SELECT glb_path FROM machines WHERE id = ?",
+      [req.params.id],
+      (err, row) => {
+        if (err) {
+          return res.status(500).json({ error: err.message });
+        }
 
-    if (b.titre || b.type) {
-      fields.push("titre = ?");
-      params.push(b.titre || b.type);
-    }
-    if (b.description || b.notes) {
-      fields.push("description = ?");
-      params.push(b.description || b.notes);
-    }
-    if (b.date_maintenance || b.date) {
-      fields.push("date_maintenance = ?");
-      params.push(b.date_maintenance || b.date);
-    }
-    if (b.statut) {
-      fields.push("statut = ?");
-      params.push(b.statut);
-    }
-
-    if (!fields.length) {
-      return res.status(400).json({ error: "Aucune mise à jour" });
-    }
-
-    params.push(machineId, id);
-
-    db.run(
-      `UPDATE machine_maintenances SET ${fields.join(
-        ", "
-      )} WHERE machine_id = ? AND id = ?`,
-      params,
-      function (err) {
-        if (err) return res.status(500).json({ error: err.message });
-        db.get(
-          "SELECT * FROM machine_maintenances WHERE machine_id = ? AND id = ?",
-          [machineId, id],
-          (e, row) => {
-            if (e) return res.status(500).json({ error: e.message });
-            res.json(row);
+        // Supprimer le fichier physique
+        if (row?.glb_path) {
+          const filePath = path.join(__dirname, "..", "..", "public", row.glb_path);
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+            console.log("🗑️ Fichier GLB supprimé:", filePath);
           }
-        );
+        }
+
+        // Supprimer la machine de la DB
+        db.run("DELETE FROM machines WHERE id = ?", [req.params.id], function (err) {
+          if (err) {
+            return res.status(500).json({ error: err.message });
+          }
+
+          console.log("✅ Machine supprimée");
+          res.json({ message: "Machine supprimée" });
+        });
       }
     );
+  } catch (error) {
+    console.error("❌ Erreur suppression machine:", error);
+    res.status(500).json({ error: error.message });
   }
-);
-
-// MAINTENANCE DELETE
-router.delete("/:machineId/maintenances/:id", requireAuth, (req, res) => {
-  db.run(
-    "DELETE FROM machine_maintenances WHERE machine_id = ? AND id = ?",
-    [req.params.machineId, req.params.id],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ ok: true });
-    }
-  );
 });
 
 module.exports = router;
